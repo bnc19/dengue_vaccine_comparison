@@ -5,7 +5,7 @@ rm(list=ls())
 library(tidyverse)
 library(cowplot)
 
-n_param = c(15,14,13, 13, 13)
+n_param = c(15,14,13, 13, 13, 14)
 # read waic
 index_files = which(grepl("M", list.files(path = "BUT/output/")))
 source_files = paste0("BUT/output/", list.files(path = "BUT/output/")[index_files], "/WAIC.RDS")
