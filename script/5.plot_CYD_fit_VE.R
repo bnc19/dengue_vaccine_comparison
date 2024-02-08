@@ -62,7 +62,7 @@ VE_plot =  VE_model %>%
   geom_hline(yintercept=0, linetype="dashed",color = "black", linewidth=1)
   
 # combine all plots 
-g1 = plot_grid(AR_plot, VE_plot, labels = c("", "c"), rel_widths = c(1.2,1))
+g1 = plot_grid(AR_plot, VE_plot, labels = c("", "e"), rel_widths = c(1.2,1))
 
 ggsave(
   plot = g1,
