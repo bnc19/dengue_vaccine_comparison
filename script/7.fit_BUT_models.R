@@ -1,0 +1,112 @@
+# Script to fit the model to data from the BUTANTAN-DV phase III clinical trial 
+
+rm(list=ls())
+
+# source functions 
+file.sources = paste0("BUT/R/", list.files(path = "BUT/R/"))
+sapply(file.sources, source)
+n_it = 10000
+
+# M1 - start with best fitting TAK-003 model (without delta and tau) -----------
+# Fixed antibody parameters, sens and spec 
+run_BUT_model (
+  include_pK3 = 0,
+  include_beta = 2,  # youngest only 
+  rho_K = 0,
+  mono_lc_SN = 1,
+  mono_lc_MU = 1,
+  MU_test_SN = 1,
+  stan_model = "BUT_model.stan",
+  folder = "M1",
+  n_it = n_it,
+  adapt_delta =0.75,
+  pop  = read_excel("BUT/data/baseline_seropositive.xlsx", sheet = 2),
+  serotype_serostatus_cases = read_excel("BUT/data/cases.xlsx"),
+  age_cases = read_excel("BUT/data/cases.xlsx", sheet = 2),
+  baseline_seropos = read_excel("BUT/data/baseline_seropositive.xlsx"),
+  titres = read_excel("BUT/data/titres.xlsx")
+)
+
+# M2 - M1 but no enhancement parameter L  --------------------------------------
+run_BUT_model (
+  enhancement = 0, 
+  include_pK3 = 0,
+  include_beta = 2,  # youngest only 
+  rho_K = 0,
+  mono_lc_SN = 1,
+  mono_lc_MU = 1,
+  MU_test_SN = 1,
+  stan_model = "BUT_model.stan",
+  folder = "M2",
+  n_it = n_it,
+  adapt_delta =0.75,
+  pop  = read_excel("BUT/data/baseline_seropositive.xlsx", sheet = 2),
+  serotype_serostatus_cases = read_excel("BUT/data/cases.xlsx"),
+  age_cases = read_excel("BUT/data/cases.xlsx", sheet = 2),
+  baseline_seropos = read_excel("BUT/data/baseline_seropositive.xlsx"),
+  titres = read_excel("BUT/data/titres.xlsx")
+)
+
+# M3 - M2 but no beta  ---------------------------------------------------------
+run_BUT_model (
+  enhancement = 0, 
+  include_pK3 = 0,
+  include_beta = 0,  
+  rho_K = 0,
+  mono_lc_SN = 1,
+  mono_lc_MU = 1,
+  MU_test_SN = 1,
+  stan_model = "BUT_model.stan",
+  folder = "M3",
+  n_it = n_it,
+  adapt_delta =0.75,
+  pop  = read_excel("BUT/data/baseline_seropositive.xlsx", sheet = 2),
+  serotype_serostatus_cases = read_excel("BUT/data/cases.xlsx"),
+  age_cases = read_excel("BUT/data/cases.xlsx", sheet = 2),
+  baseline_seropos = read_excel("BUT/data/baseline_seropositive.xlsx"),
+  titres = read_excel("BUT/data/titres.xlsx")
+)
+
+# M4 - M3 but MU lc50 offset from MO -------------------------------------------
+run_BUT_model (
+  mono_lc_MU = 2,
+  mono_lc_SN = 1,
+  enhancement = 0, 
+  include_pK3 = 0,
+  include_beta = 0,  
+  rho_K = 0,
+  MU_test_SN = 1,
+  stan_model = "BUT_model.stan",
+  folder = "M4",
+  n_it = n_it,
+  adapt_delta =0.75,
+  pop  = read_excel("BUT/data/baseline_seropositive.xlsx", sheet = 2),
+  serotype_serostatus_cases = read_excel("BUT/data/cases.xlsx"),
+  age_cases = read_excel("BUT/data/cases.xlsx", sheet = 2),
+  baseline_seropos = read_excel("BUT/data/baseline_seropositive.xlsx"),
+  titres = read_excel("BUT/data/titres.xlsx")
+)
+
+# M5 - M4 but SN lc50 offset from MO -------------------------------------------
+run_BUT_model (
+  mono_lc_MU = 2,
+  mono_lc_SN = 2,
+  enhancement = 0, 
+  include_pK3 = 0,
+  include_beta = 0,  
+  rho_K = 0,
+  MU_test_SN = 1,
+  stan_model = "BUT_model.stan",
+  folder = "M5",
+  n_it = n_it,
+  adapt_delta =0.75,
+  pop  = read_excel("BUT/data/baseline_seropositive.xlsx", sheet = 2),
+  serotype_serostatus_cases = read_excel("BUT/data/cases.xlsx"),
+  age_cases = read_excel("BUT/data/cases.xlsx", sheet = 2),
+  baseline_seropos = read_excel("BUT/data/baseline_seropositive.xlsx"),
+  titres = read_excel("BUT/data/titres.xlsx")
+)
+
+
+
+
