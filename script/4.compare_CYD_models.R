@@ -5,11 +5,11 @@ rm(list = ls())
 library(tidyverse)
 library(cowplot)
 
-n_param = c(37,41,34,34,35,
+n_param = c(37,40,34,34,35,
             32,34,34,34,31,
             34,34,30)
 
-n_param_sev = c(35,36,36, 37, 38, 39, 37)
+
 # read waic
 index_files = which(grepl("M", list.files(path = "CYD/output/")))
 source_files = paste0("CYD/output/", list.files(path = "CYD/output/")[index_files], "/WAIC.RDS")
@@ -21,12 +21,17 @@ WAIC2 = WAIC[as.character(sort(as.numeric(n1)))]
 # compare WAIC
 comp_WAIC = loo::loo_compare(WAIC2) # M12 
 
-# get log lik
 
+# extract waic and elpd 
+waic_df = comp_WAIC %>%  
+  as.data.frame() %>% 
+  rownames_to_column(var = "model") %>% 
+  select(model, elpd_diff, waic) %>% 
+  mutate(model = as.numeric(model))
+
+# get log lik
 ll_source = paste0("CYD/output/", list.files(path = "CYD/output/")[index_files], "/posterior.csv")
 post = bind_rows(lapply(ll_source, read.csv))
-
-
 
 ll = post %>%  
   filter(variable == "ll") %>% 
@@ -35,8 +40,6 @@ ll = post %>%
   arrange(model) %>% 
   mutate(param = n_param) %>% 
   left_join(waic_df)
-
-
 
 # models 
 models = as.numeric(paste0(1:length(n_param)))
@@ -148,13 +151,14 @@ p2 = df %>%
         plot.margin = margin(t = 0, r = 0, b = 0, l = 0)) 
 
 # plot number of parameters 
-p3 =df %>% 
+p3 = df %>% 
   ggplot(aes(x = model-0.5, y = param)) + # - 0.5 so aligns with other plots 
   geom_point(aes(color=color, size = color)) + geom_line() +
   theme_bw() + ylab("Number of parameters") +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
   scale_x_continuous(limits = c(0,13), breaks = 1:13) +
+  scale_y_continuous(limits = c(30,40), breaks = seq(30,40,by=2)) +
   theme(axis.title.x = element_blank(),legend.position = "none",
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
@@ -184,6 +188,9 @@ ggsave(g1, file = "CYD/output/figures/model_variants.jpg",
 
 
 # severe  --------------------------------------------
+
+n_param_sev = c(35,36,36, 37, 38, 39, 37)
+
 index_files_sev = which(grepl("M", list.files(path = "CYD/output/severe/")))
 source_files_sev = paste0("CYD/output/severe/", 
                           list.files(path = "CYD/output/severe/")[index_files_sev], "/WAIC.RDS")
@@ -193,12 +200,6 @@ WAIC_sev = (lapply(source_files_sev, readRDS))
 comp_WAIC_sev = loo::loo_compare(WAIC_sev) # M6
 
 
-# extract waic and elpd 
-waic_df = comp_WAIC %>%  
-  as.data.frame() %>% 
-  rownames_to_column(var = "model") %>% 
-  select(model, elpd_diff, waic) %>% 
-  mutate(model = as.numeric(model))
 
 waic_df_sev = comp_WAIC_sev %>%  
   as.data.frame() %>% 
