@@ -1,25 +1,25 @@
 # Script to impute D3 and D3 efficacy using M4 parameters
 rm(list=ls())
 
-library(readxl)
 library(tidyverse)
 post = read.csv("BUT/output/M4/posterior_chains.csv")
-titres = read_excel("BUT/data/titres.xlsx")
+titres = readxl::read_excel("BUT/data/raw/titres.xlsx")
 
-mu = titres %>%  
-  pivot_wider(values_from = "Titre", names_from = "Serotype") %>% 
-  select(- Serostatus, - Arm) %>% 
+mu = titres %>% 
+  pivot_wider(names_from = Serotype, values_from = Titre) %>% 
+  select(-Serostatus, - Arm) %>% 
   as.matrix()
 
 time = 1:24
 B = V  = 2
 K = 4
+
 C = 3
 T = length(time)
 I = 1000
-ts = c(-2.12,0.31)
-hs = c(1.9,4.3)
-hl = 73.5
+ts = c(-2.1,0.31)
+hs = c(1.93,4.34)
+hl = 72.14
 
 # sample posterior chains
 set.seed(10)
@@ -29,8 +29,8 @@ post_samp = as.data.frame(sapply(post, sample, I))
 pi_1 = -log(2) / hs
 pi_2 = -log(2) / hl
 
-lc3 = rnorm(I, 5.1150, 0.5)
-lc4 = rnorm(I, 4.4794, 0.5)
+lc3 = rnorm(I, 5.1701, 0.5)
+lc4 = rnorm(I, 4.3797, 0.5)
 
 omega = post_samp$omega
 w = post_samp$w.1.
@@ -43,7 +43,6 @@ nc50[1,,] = t(lc_SN)
 nc50[2,,] = t(lc_MO)
 nc50[3,,] = t(lc_MU)
 
-
 # Arrays
 n = array(NA, dim = c(B,K,T))
 n_C = array(NA, dim = c(C,K,T))
@@ -53,7 +52,6 @@ for(b in 1:B){
     for(t in 1:T){
         n[b,k,t] = mu[b,k] * (exp(pi_1[b] * time[t] + pi_2 * ts[b]) + exp(pi_2 * time[t] + pi_1[b] * ts[b])) / (exp(pi_1[b] * ts[b]) + exp(pi_2 * ts[b])) 
     }}}
-
 
 
 for(k in 1:K){
