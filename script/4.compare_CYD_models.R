@@ -9,7 +9,7 @@ n_param = c(37,41,34,34,35,
             32,34,34,34,31,
             34,34,30)
 
-n_param_sev = c(35,36,36, 37, 38, 39, 37)
+
 # read waic
 index_files = which(grepl("M", list.files(path = "CYD/output/")))
 source_files = paste0("CYD/output/", list.files(path = "CYD/output/")[index_files], "/WAIC.RDS")
@@ -183,15 +183,16 @@ ggsave(g1, file = "CYD/output/figures/model_variants.jpg",
        height = 40, width = 50, units="cm", scale = 0.7)
 
 
-# severe  --------------------------------------------
+# severe  ----------------------------------------------------------------------
 index_files_sev = which(grepl("M", list.files(path = "CYD/output/severe/")))
 source_files_sev = paste0("CYD/output/severe/", 
                           list.files(path = "CYD/output/severe/")[index_files_sev], "/WAIC.RDS")
 WAIC_sev = (lapply(source_files_sev, readRDS))
 
-# compare WAIC
-comp_WAIC_sev = loo::loo_compare(WAIC_sev) # M6
 
+n_param_sev = c(35,36,36, 37, 38, 39, 37)
+# compare WAIC
+comp_WAIC_sev = loo::loo_compare(WAIC_sev) # models start from M0 so subtract 1 from best fitting 
 
 # extract waic and elpd 
 waic_df = comp_WAIC %>%  
