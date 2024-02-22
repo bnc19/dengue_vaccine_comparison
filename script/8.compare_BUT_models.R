@@ -5,7 +5,8 @@ rm(list=ls())
 library(tidyverse)
 library(cowplot)
 
-n_param = c(15,14,13, 13, 13)
+n_param = c(15,14,13, 13, 13,
+            14, 14, 11)
 # read waic
 index_files = which(grepl("M", list.files(path = "BUT/output/")))
 source_files = paste0("BUT/output/", list.files(path = "BUT/output/")[index_files], "/WAIC.RDS")
@@ -17,7 +18,7 @@ WAIC2 = WAIC[as.character(sort(as.numeric(n1)))]
 # compare WAIC
 comp_WAIC = loo::loo_compare(WAIC2)
 
-# M4 is best 
+# M7 is best 
 
 # extract waic and elpd 
 waic_df = comp_WAIC %>%  
@@ -40,9 +41,8 @@ ll = post %>%
   left_join(waic_df)
 
 # models 
-models = as.numeric(paste0(1:5))
-parameters= c("L", "beta", "omega", "kappa")
-depend = c("global", "age")
+models = as.numeric(paste0(1:length(n_param)))
+parameters= c("L", "beta", "lc", "omega", "kappa", "eta")
 
 # create empty matrix 
 m = matrix(nrow = length(models), ncol = length(parameters))
@@ -58,20 +58,29 @@ colnames(d) = parameters
 d[1,1] = "global"
 
 # beta
-d[1:2,2] = "age"
+d[c(1:2,6),2] = "age (youngest)"
+
+# lc 
+d[1:3,3] = "serostatus & serotype (serostatus = MO)"
+d[4:7,3] = "serostatus & serotype (serostatus = MO, MU)"
+d[5,3] = "serostatus & serotype"
+d[8,3] = "global"
 
 # omega
-d[4:5,3] = "global" 
+d[4:7,4] = "global" 
 
 # kappa 
-d[5,4] = "global"
+d[5,5] = "global"
+
+# eta
+d[7:8,6] = "age (youngest)"
 
 # add log lik to dependency matrix 
 d$model = models
 
 # format data ready to plot 
 df = left_join(d, ll) %>%
-  pivot_longer(cols = L:kappa,
+  pivot_longer(cols = L:eta,
                names_to = "Parameter",
                values_to = "depends") %>%
   mutate(depends = ifelse(is.na(depends), "not included", depends)) %>%
@@ -79,15 +88,18 @@ df = left_join(d, ll) %>%
     depends = factor(
       depends,
       levels = c(
-        "age",
+        "age (youngest)",
+        "serostatus & serotype (serostatus = MO)",
+        "serostatus & serotype (serostatus = MO, MU)",
+        "serostatus & serotype",
         "global",
         "not included"
       ) )) %>%
-  mutate(color = ifelse(model == 4, "red", "black"))
+  mutate(color = ifelse(model == 7, "red", "black"))
 
-
-
-mycols = c("#99CC99", "#CCCCCC", "#FFFFFF")
+mycols = c("#A6BDDB", "#1C9099",
+           "#666699", "#FBB4B9", 
+           "#CCCCCC", "#FFFFFF")
 
 # plot parameter dependencies 
 p1 = df %>%
@@ -97,11 +109,12 @@ p1 = df %>%
   theme(legend.title = element_blank(),
         legend.position = "bottom",
         plot.margin = margin(t = 0, r = 0, b = 0, l = 0)) +
-  scale_x_continuous(limits = c(0.5,5.5),breaks = 1:5) +
+  scale_x_continuous(limits = c(0.5,8.5),breaks = 1:8) +
   scale_fill_manual(values=mycols) +
   scale_y_discrete(labels = c('omega' = expression(omega),
                               "kappa" = expression(kappa),
-                              "beta" = expression(beta))) +
+                              "beta" = expression(beta),
+                              "eta" = expression(eta))) +
   xlab("Model")
 
 # plot log -lilelihood 
@@ -109,7 +122,7 @@ p2 = df %>%
   ggplot(aes(x = model-0.5, y = mean)) +
   geom_point(aes(color=color, size = color)) + geom_line() +
   geom_ribbon(aes(ymin = q5, ymax = q95), alpha =0.2) + 
-  scale_x_continuous(limits = c(0,5), breaks = 1:5) + 
+  scale_x_continuous(limits = c(0,8), breaks = 1:8) + 
   ylab("Log-likelihood") +
   xlab(" ")  + theme_bw() +
   scale_color_manual(values=c("#000000", "#CC0033"))+
@@ -126,8 +139,8 @@ p3 =df %>%
   theme_bw() + ylab("Number of \nparameters") +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
-  scale_x_continuous(limits = c(0,5), breaks = 1:5) +
-  scale_y_continuous( breaks = 13:15) +
+  scale_x_continuous(limits = c(0,8), breaks = 1:8) +
+  scale_y_continuous( breaks = 11:15) +
   theme(axis.title.x = element_blank(),legend.position = "none",
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
@@ -141,7 +154,7 @@ p4 =df %>%
   theme_bw() + ylab("Difference in ELPD \ncompared to model 4") +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
-  scale_x_continuous(limits = c(0,5), breaks = 1:5) +
+  scale_x_continuous(limits = c(0,8), breaks = 1:8) +
   theme(axis.title.x = element_blank(),legend.position = "none",
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
@@ -152,7 +165,7 @@ g1 = cowplot::plot_grid(p2, NULL, p3, NULL,p4, NULL, p1, ncol=1,
                         axis = "tblr", align = "hv")
 
 
-ggsave(g1, file = "BUT/output/figures/model_variants.jpg",
+ggsave(g1, file = "BUT/output/figures/model_variants_B.jpg",
        height = 25, width = 30, units="cm", scale = 0.8)
 
 
