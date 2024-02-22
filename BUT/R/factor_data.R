@@ -3,22 +3,24 @@
 # 1: function to factorise VCD data when importing it at the start of any script
 factor_BUT_cases = function(cases){
   
-  if(is.null(cases$Serostatus)) cases$Serostatus = "both"
-  if(is.null(cases$Age)) cases$Age = "all"
-  if(is.null(cases$Serotype)) cases$Serotype = "all"
-  if(is.null(cases$Arm)) cases$Arm = "both"
+  if(is.null(cases$serostatus)) cases$serostatus = "both"
+  if(is.null(cases$age)) cases$age = "all"
+  if(is.null(cases$serotype)) cases$serotype = "all"
+  if(is.null(cases$arm)) cases$arm = "both"
   
   cases = cases  %>%  
-    mutate(Age = factor(Age,
+    mutate(age = factor(age,
                         levels = c("2-6yrs", "7-17yrs", "18-59yrs", "all")), 
-           Serostatus = factor(Serostatus,
-                               levels = c("SN", "SP", "both"),
-                               labels = c("seronegative", "seropositive", "both")),
-           Serotype = factor(Serotype,
+           serostatus = factor(serostatus,
+                               levels = c("SN", "SP"),
+                               labels = c("seronegative", "seropositive")),
+           serotype = factor(serotype,
                              levels = c("D1", "D2", "all"),
                              labels = c("DENV1", "DENV2", "all")),
-           Arm = factor(Arm, 
-                        levels = c("placebo", "vaccine", "both")))
+           arm = factor(arm, 
+                        levels = c("C", "V"),
+                        labels = c("placebo", "vaccine")),
+           time = factor("1-24"))
   
   return(cases)
 }
