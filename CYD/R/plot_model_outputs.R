@@ -46,6 +46,10 @@ plot_CYD_attack_rate = function(VCD,
 AR_data = lapply(VCD, calc_CYD_attack_rates)
 AR_model = extract_CYD_model_results(AR)  
 
+age_fill = scales::brewer_pal(palette = "Blues")(4)[c(2,4)]
+serotype_fill = scales::brewer_pal(palette = "RdPu")(6)[2:5]
+trial_fill = scales::brewer_pal(palette = "PuBuGn")(3)[2:3]
+
 # plot symp attack rate by serotype and trial arm ------------------------------
   
   Sy_AR_plot_VK = AR_model %>%
@@ -77,7 +81,7 @@ AR_model = extract_CYD_model_results(AR)
       linewidth = 1
     ) +
     labs(x = " ", y = "") +
-    scale_color_brewer(palette = "Set2") +
+    scale_color_manual(values = serotype_fill) +
    guides(shape = "none", linetype = "none")
   
 # plot symp attack rate by age, serostatus and trial arm -----------------------
@@ -108,7 +112,7 @@ AR_model = extract_CYD_model_results(AR)
       width =  0.4,
       linewidth = 1) +
     labs(x = " ", y = "Symptomatic \nattack rate (%)") +
-    scale_color_brewer(palette = "Accent")
+  scale_color_manual(values = age_fill)
   
 # plot hosp attack rate by age, serostatus, serotype and trial arm -------------
 
@@ -144,7 +148,7 @@ AR_model = extract_CYD_model_results(AR)
       linewidth = 1
     ) +
     labs(x = " ", y = "Hospitalisation \nattack rate (%)") +
-    scale_color_brewer(palette = "Set2") +
+  scale_color_manual(values = serotype_fill) +
     theme(legend.position = "none") +
     facet_wrap(~ age) 
   
@@ -182,7 +186,7 @@ AR_model = extract_CYD_model_results(AR)
       ) +
       facet_grid(serostatus ~ arm) +
       labs(x = "Month", y = "Hospitalisation \nattack rate (%)") +
-      scale_color_brewer(palette = "Accent") +
+      scale_color_manual(values = age_fill) +
       theme(legend.position = "none")  
     
   out = cowplot::plot_grid(
@@ -221,6 +225,10 @@ plot_severe_attack_rate = function(VCD,
   AR_data = calc_CYD_attack_rates(sev)
   AR_model = extract_CYD_model_results(AR)  
   
+  age_fill = scales::brewer_pal(palette = "Blues")(4)[c(2,4)]
+  serotype_fill = scales::brewer_pal(palette = "RdPu")(6)[2:5]
+  trial_fill = scales::brewer_pal(palette = "PuBuGn")(3)[2:3]
+  
   # plot severe attack rate by serotype, trial arm, serotype and age
   
   Se_AR_BVKJ = AR_data %>% 
@@ -256,7 +264,7 @@ plot_severe_attack_rate = function(VCD,
       linewidth = 1
     ) +
     labs(x = " ", y = "Severe attack rate (%)") +
-    scale_color_brewer(palette = "Set2") +
+    scale_color_manual(values = serotype_fill) +
     guides(shape = "none",
            linetype = "none") 
     facet_grid(age ~ serostatus)
@@ -296,7 +304,8 @@ plot_severe_attack_rate = function(VCD,
     labs(x = " ", y = "Severe attack rate (%)") +
     guides(shape = "none",
            linetype = "none") +
-    facet_wrap(~age)
+    facet_wrap(~age) +
+    scale_color_manual(values = trial_fill)
   
   
 # plot severe attack rate by age in vac SP -------------------------------------
@@ -358,6 +367,10 @@ plot_CYD_VE  = function(file_path,
     y = "Efficacy against hospitalisation (%)"
   }
   
+  age_fill = scales::brewer_pal(palette = "Blues")(4)[c(2,4)]
+  serotype_fill = scales::brewer_pal(palette = "RdPu")(6)[2:5]
+  trial_fill = scales::brewer_pal(palette = "PuBuGn")(3)[2:3]
+  
   # plot VE by serostatus for each serotype --------------------------------------
   
   VE_BKT =  VE_model %>%
@@ -386,9 +399,9 @@ plot_CYD_VE  = function(file_path,
     geom_hline(yintercept = 0, linetype = "dashed", color = "black", linewidth = 1) +
     facet_grid(serostatus~serotype) + 
     theme_light() + 
-    theme(legend.position = "top")+
-    scale_color_brewer(palette = "Paired") +
-    scale_fill_brewer(palette = "Paired") 
+    theme(legend.position = "top") +
+    scale_color_manual(values =  trial_fill) +
+    scale_fill_manual(values = trial_fill) 
   
   ggsave(
     plot = VE_BKT_plot,
@@ -429,8 +442,8 @@ plot_CYD_VE  = function(file_path,
     scale_x_continuous(breaks = seq(0, 54, 6)) +
     scale_y_continuous(breaks = seq(round(min(VE_BKJT$lower),-2), 100, 50)) +
     geom_hline(yintercept=0, linetype="dashed",color = "black", linewidth=1) +
-    scale_color_brewer(palette = "Paired") +
-    scale_fill_brewer(palette = "Paired") +
+    scale_color_manual(values =  trial_fill) +
+    scale_fill_manual(values = trial_fill) +
     facet_grid(serotype ~ age) + theme_light() + theme(legend.position = "top")
 
   
