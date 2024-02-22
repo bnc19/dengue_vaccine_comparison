@@ -258,7 +258,7 @@ grid_plot_data = plot_grid(Ho_BVJD_plot,
                            Se_VJD_plot,
                            Se_BVKJ_plot,
                            ncol = 2, 
-                           labels = c("b", "b", "c", "d", "e", "f"))
+                           labels = c("a", "b", "c", "d", "e", "f"))
 
 ggsave(grid_plot_data, file = "CYD/output/figures/case_data.jpg",
        height = 50, width = 50, scale =0.68, unit = "cm" )
