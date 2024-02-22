@@ -26,6 +26,7 @@ data{
    
    // FLAGS
    int<lower = 0, upper = 1> include_pK3;      // include serotype specific p? (T/F)
+   int<lower = 0, upper = 1> single_lc;        // 0 for serostatus and or serotype lc50 based on other flags / 1 for single lc50 
    int<lower = 0, upper = 2> include_beta;     // 0 if no age-specific nc50, 1= change age groups 1 and 2, 2 = change age grp 1 
    int<lower = 0, upper = 2> mono_lc_SN;       // 0 for serotype specific lc SN / 1 for single / 2 for serotype-specific lc MO with kappa offset  
    int<lower = 0, upper = 2> mono_lc_MU;       // 0 for serotype specific lc MU / 1 for single / 2 for serotype-specific lc MO with omega offset 
@@ -38,7 +39,7 @@ data{
    int<lower = 0, upper = 1> MU_test_SN;       // multitypic test SN at baseline (T/F)
    int<lower = 0, upper = 1>  MU_symp;         // 0 for only 1' and 2' symp infections, 1 for post-sec symp inf   
    int<lower = 0, upper = 1> enhancement;      // 0 for no vac enhancement of SN, 1 for enhancement 
-   
+   int<lower = 0, upper = 1> inc_FOIJ;          // 0 for no age-specific FOI, 1 for youngest age-specific 
 }
 
 parameters{
@@ -54,6 +55,7 @@ parameters{
   real<lower = 0> omega;                      // reduction in titre for protection against MU compared to MO 
   real<lower = 0> kappa;                      // increase in titre for protection against SN compared to MO 
   array [(J-1)] real  beta;                   // increase in lc50 for protection in younger 
+  real<lower = 0>  FOI_J1;                    // age specific FOI 
 }
 
 transformed parameters{
@@ -283,7 +285,14 @@ if(MU_test_SN == 0){
 
 // age-group titre offsets 
 array [K] real e_beta = {exp(beta[1]), exp(beta[2])};
-        
+      
+if(single_lc == 1){
+  for(c in 1:C)
+   for(k in 1:K) 
+    for(j in 1:J)
+    nc50[c,k,j] = exp(lc[1,1]); 
+} else {
+
 if(mono_lc_SN == 1){ // SN, oldest
   for(k in 1:K) nc50[1,k,3] = exp(lc[1,1]); 
    } else if (mono_lc_SN == 0) {
@@ -323,6 +332,9 @@ if(include_beta == 1){
    nc50[c,k,2] = nc50[c,k,3];   
   }
 }
+
+} 
+
 // Enhancement 
 for(k in 1:K){
   if(enhancement == 1){ 
@@ -354,14 +366,21 @@ for(c in 1:C)
      RR_symp[c,1,k,j,t] =  1 ;
     }
 
-// FOI  
+ // FOI 
+ 
+real FOI_J[J] = {FOI_J1, 1, 1}  ; // scale youngest group only 
+
+if(inc_FOIJ == 0) {
 for(k in 1:K)
- for(j in 1:J){
+ for(j in 1:J)
   for(t in 1:T)  lambda[k,j,t] = exp(-lambda_K[k]) ; 
+} else{
+for(k in 1:K)
+ for(j in 1:J)
+  for(t in 1:T)  lambda[k,j,t] = exp(-lambda_K[k] * FOI_J[j]) ; 
 }
 
-
-// SURVIVAL MODEL - prob of surviving each time point without infection - only D1 and D1 lambda 
+// SURVIVAL MODEL - prob of surviving each time point without infection - only D1 and D2 lambda 
 for(b in 1:B)
  for(v in 1:V)
   for(j in 1:J)
@@ -551,10 +570,7 @@ model {
   omega ~ normal(0,2);
   kappa ~  normal(0,2);
   beta ~ normal(0,2);
-  
-  // tak posterior 
-  // sens ~ normal(0.91,0.01) ;
-  // spec ~ normal(0.99,0.007) ;
+  FOI_J1 ~ normal(1,1);
 }
 
 generated quantities{
