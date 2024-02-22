@@ -1,5 +1,4 @@
-# Script to plot the log-likelihood and parameters of all 31 model variants 
-# Sup. Fig. 3. 
+
 rm(list=ls())
 # set up 
 library(tidyverse)
@@ -86,12 +85,13 @@ df = left_join(d, ll) %>%
         "global",
         "not included"
       ) )) %>%
-  mutate(color = ifelse(model == 4, "red", "black"))
+  mutate(color = ifelse(model == 2, "red", "black"))
 
 
 
-mycols = c("#99CC99", "#999966", "#CC9999", 
-           "#CCCCFF",  "#CCCCCC", "#FFFFFF")
+mycols = c("#A6BDDB", "#1C9099",
+           "#666699", "#FBB4B9", 
+           "#CCCCCC", "#FFFFFF")
 
 # plot parameter dependencies 
 p1 = df %>%
@@ -142,7 +142,7 @@ g1 = cowplot::plot_grid(p2, NULL, p3, NULL, p1, ncol=1,
                         axis = "tblr", align = "hv")
 
 
-ggsave(g1, file = "TAK/output/figures/model_variants.jpg",
+ggsave(g1, file = "TAK/output/figures/model_variants_T.jpg",
        height = 40, width = 50, units="cm", scale = 0.7)
 
 
