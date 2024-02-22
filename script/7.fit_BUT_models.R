@@ -174,25 +174,3 @@ run_BUT_model (
   titres = readRDS("BUT/data/processed/mu.RDS")
 )
 
-
-# M8 - but single lc50 value ------------------------------------------------
-run_BUT_model (
-  single_lc = 1, 
-  inc_FOIJ = 1, 
-  enhancement = 0, 
-  include_beta = 0,  
-  rho_K = 0,
-  MU_test_SN = 1,
-  stan_model = "BUT_model.stan",
-  folder = "M8",
-  n_it = n_it,
-  adapt_delta =0.75,
-  sens = 0.91,
-  spec = 0.99,
-  ts = c(-2.1,0.31),
-  hs = c(1.93,4.34),
-  hl = 72.14,
-  baseline_seropos = readRDS("BUT/data/processed/baseline_SP.RDS"),
-  cases = readRDS("BUT/data/processed/cases_stan_format.RDS"),
-  titres = readRDS("BUT/data/processed/mu.RDS")
-)
