@@ -226,11 +226,10 @@ run_CYD_model (
   BF = T
 )
 
-# M13 - M12 but no enhancement -------------------------------------------------
+# M13 - M12 but single L -------------------------------------------------
 run_CYD_model (
-  enhancement = 0,
+  L_K = 0, 
   mono_lc_SN = 1,
-  L_K = 1, 
   tau_K = 0,
   mono_lc_MU = 2,
   include_beta = 0,
