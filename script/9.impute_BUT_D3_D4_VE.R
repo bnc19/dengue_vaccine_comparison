@@ -37,8 +37,6 @@ for(b in 1:B){
       n[b,k,t] = mu[b,k] * (exp(pi_1[b] * time[t] + pi_2 * ts[b]) + exp(pi_2 * time[t] + pi_1[b] * ts[b])) / (exp(pi_1[b] * ts[b]) + exp(pi_2 * ts[b])) 
     }}}
 
-
-
 for(k in 1:K){
   for(t in 1:T){
     n_C[1,k,t] =  n[1,k,t];
