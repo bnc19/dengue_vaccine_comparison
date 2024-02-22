@@ -513,7 +513,7 @@ for(b in 1:B)
      }
        for(t in (HI+1):T) {
         // MU3 -1 
-        pMU3[b,v,1,j,(t+1)] += (1 - phiT[4] * gammaT[4] *  RR_symp[3,v,4,j,(t-HI)]) * (1-lambda[4,j,(t-HI)]) * pMU2[b,v,4,j,(t-HI)] + (1 - phiT[3] * gammaT[3] *  RR_symp[3,v,3,j,(t-HI)]) * (1-lambda[3,j,(t-HI)]) * pMU2[b,v,5,j,(t-HI)] + (1 - phiT[3] * gammaT[2] *  RR_symp[3,v,2,j,(t-HI)]) * (1-lambda[2,j,(t-HI)]) * pMU2[b,v,6,j,(t-HI)] ; 
+        pMU3[b,v,1,j,(t+1)] += (1 - phiT[4] * gammaT[4] *  RR_symp[3,v,4,j,(t-HI)]) * (1-lambda[4,j,(t-HI)]) * pMU2[b,v,4,j,(t-HI)] + (1 - phiT[3] * gammaT[3] *  RR_symp[3,v,3,j,(t-HI)]) * (1-lambda[3,j,(t-HI)]) * pMU2[b,v,5,j,(t-HI)] + (1 - phiT[2] * gammaT[2] *  RR_symp[3,v,2,j,(t-HI)]) * (1-lambda[2,j,(t-HI)]) * pMU2[b,v,6,j,(t-HI)] ; 
         // MU3 -2 
         pMU3[b,v,2,j,(t+1)] += (1 - phiT[4] * gammaT[4] *  RR_symp[3,v,4,j,(t-HI)]) * (1-lambda[4,j,(t-HI)]) * pMU2[b,v,2,j,(t-HI)] + (1 - phiT[3] * gammaT[3] *  RR_symp[3,v,3,j,(t-HI)]) * (1-lambda[3,j,(t-HI)]) * pMU2[b,v,3,j,(t-HI)] + (1 - phiT[1] * gammaT[1] *  RR_symp[3,v,1,j,(t-HI)]) * (1-lambda[1,j,(t-HI)]) * pMU2[b,v,6,j,(t-HI)] ; 
         // MU3 -3
