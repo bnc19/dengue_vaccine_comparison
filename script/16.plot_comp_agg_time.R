@@ -3,11 +3,14 @@ rm(list = ls())
 
 source("compare_vaccines/R/plotting_functions.R")
 library(tidyverse)
-n= 100
+n = 500
+
+# colours 
+serotype_fill = c(scales::brewer_pal(palette = "RdPu")(6)[2:5], "#CCCCCC") 
 
 TAK_file = "TAK/output/M2/VE.RDS"
 CYD_file = "CYD/output/M12/VE.RDS"
-BUT_file = "BUT/output/M4/VE.RDS"
+BUT_file = "BUT/output/M7/VE.RDS"
 
 # Read in best fitting models and sample n iterations 
 
@@ -49,7 +52,8 @@ year2_comp = tidy_TAK_VE %>%
     legend.margin = margin(0, 0, 0, 0),
     legend.key.size = unit(0.2, "cm")
   )  + ylab("Vaccine efficacy (%)") +
-  ggtitle("Cumulative vaccine efficacy across months 1 to 24")
+  ggtitle("Cumulative vaccine efficacy across months 1 to 24") +
+  scale_color_manual(values = serotype_fill)
 
 ggsave(
   plot = year2_comp,
@@ -65,12 +69,12 @@ ggsave(
 tidy_CYD_VE_4.5 = format_4.5_year_VE(CYD_VE2)
 tidy_TAK_VE_4.5 = format_4.5_year_VE(TAK_VE2)
 
-tidy_CYD_VE_4.5$Vaccine = "Dengvaxia"
-tidy_TAK_VE_4.5$Vaccine = "Qdenga"
+tidy_CYD_VE_4.5$vaccine = "Dengvaxia"
+tidy_TAK_VE_4.5$vaccine = "Qdenga"
 
 year_4.5_comp = tidy_TAK_VE_4.5 %>% 
   bind_rows(tidy_CYD_VE_4.5) %>%  
-  ggplot(aes(x = Vaccine, y= mean, group = Serotype)) +
+  ggplot(aes(x = vaccine, y= mean, group = Serotype)) +
   geom_point(aes(color = Serotype),
              position = position_dodge(0.4)) +
   geom_errorbar(aes(ymin = lower, ymax = upper, color = Serotype),
@@ -86,11 +90,12 @@ year_4.5_comp = tidy_TAK_VE_4.5 %>%
     legend.spacing.y = unit(0, "pt"),
     legend.margin = margin(0, 0, 0, 0)
   )  + ylab("Vaccine efficacy (%)") +
-  ggtitle("Cumulative vaccine efficacy across months 1 to 54")
+  ggtitle("Cumulative vaccine efficacy across months 1 to 54") +
+  scale_color_manual(values = serotype_fill)
 
 ggsave(
   plot = year_4.5_comp,
-  filename = "output/year_4.5_comp.jpg",
+  filename = "compare_vaccines/output/year_4.5_comp.jpg",
   height = 20,
   width = 30,
   units = "cm",
