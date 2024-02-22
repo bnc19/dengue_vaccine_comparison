@@ -35,33 +35,32 @@ extract_BUT_model_results = function(fit_ext){
 
 # function to plot attack rates ------------------------------------------------
 
-plot_BUT_attack_rate = function(age_cases,
-                                serotype_serostatus_cases,
+plot_BUT_attack_rate = function(cases,
                                 file_path,
-                                hospital = F,
                                 AR) {
   
+age_fill = scales::brewer_pal(palette = "Blues")(4)[2:4]
+serotype_fill = c(scales::brewer_pal(palette = "RdPu")(6)[2:5]) 
   
 # add aggregated populations to data and calculate attack rates
-
-AR_age_data = calc_BUT_attack_rates(age_cases)
-AR_serotype_data = calc_BUT_attack_rates(serotype_serostatus_cases)
 AR_model = extract_BUT_model_results(AR)
+
+BVK_cases = calc_BUT_attack_rates(cases$Sy_BVK)
   
 # plot serotype serostatus attack rate 
 AR_plot_BVK = AR_model %>%
   filter(group == "AR_BVK") %>%
-  separate(name, into = c("Serostatus", "Arm", "Serotype")) %>% 
-  mutate(Arm = factor(Arm, levels = 1:2, labels = c("placebo", "vaccine")),
-         Serostatus = factor(Serostatus, levels = 1:2, labels = c("seronegative", "seropositive")),
-         Serotype = factor(Serotype, levels = 1:2, labels = c(paste0("DENV", 1:2)))) %>% 
-    bind_rows(AR_serotype_data) %>%
-    ggplot(aes(x = Arm, y = mean)) +
+  separate(name, into = c("serostatus", "arm", "serotype")) %>% 
+  mutate(arm = factor(arm, levels = 1:2, labels = c("placebo", "vaccine")),
+         serostatus = factor(serostatus, levels = 1:2, labels = c("seronegative", "seropositive")),
+         serotype = factor(serotype, levels = 1:2, labels = c(paste0("DENV", 1:2)))) %>% 
+    bind_rows(BVK_cases) %>%
+    ggplot(aes(x = arm, y = mean)) +
     geom_point(
       aes(
         shape = type,
-        color = Serotype,
-        group = interaction(type, Serotype)
+        color = serotype,
+        group = interaction(type, serotype)
       ),
       position = position_dodge(width = 0.5),
       size = 3
@@ -70,38 +69,36 @@ AR_plot_BVK = AR_model %>%
       aes(
         ymin = lower ,
         ymax = upper ,
-        group = interaction(type, Serotype),
+        group = interaction(type, serotype),
         linetype = type,
-        color = Serotype
+        color = serotype
       ),
       position = position_dodge(width =  0.5),
       width =  0.4,
       linewidth = 1
     ) +
     labs(x = " ", y = "Symptomatic attack rate (%)") +
-    scale_color_brewer(palette = "Set2") +
-    scale_x_discrete(
-      labels  = c(
-        "Placebo",
-        "Vaccine"
-      )) +
-    facet_wrap(~ Serostatus)
+    scale_color_manual(values = serotype_fill) +
+    facet_wrap( ~serostatus)
   
 # plot symp attack rate by age and trial arm -----------------------
   
-AR_plot_VJ = AR_model %>%
-  filter(group == "AR_VJ") %>%
-  separate(name, into = c("Arm", "Age")) %>% 
-  mutate(Arm = factor(Arm, levels = 1:2, labels = c("placebo", "vaccine")),
-          Age = factor(Age, labels = c("2-6yrs", "7-17yrs", "18-59yrs"),
+BVJ_cases = calc_BUT_attack_rates(cases$Sy_BVJ)
+
+AR_plot_BVJ = AR_model %>%
+  filter(group == "AR_BVJ") %>%
+  separate(name, into = c("serostatus", "arm", "age")) %>% 
+  mutate(arm = factor(arm, levels = 1:2, labels = c("placebo", "vaccine")),
+         serostatus = factor(serostatus, levels = 1:2, labels = c("seronegative", "seropositive")),
+         age = factor(age, labels = c("2-6yrs", "7-17yrs", "18-59yrs"),
                         levels = 1:3)) %>% 
-    bind_rows(AR_age_data) %>%
-    ggplot(aes(x = Arm, y = mean)) +
+    bind_rows(BVJ_cases) %>%
+    ggplot(aes(x = arm, y = mean)) +
     geom_point(
       aes(
         shape = type,
-        color = Age,
-        group = interaction(type, Age)
+        color = age,
+        group = interaction(type, age)
       ),
       position = position_dodge(width = 0.5),
       size = 3
@@ -110,9 +107,9 @@ AR_plot_VJ = AR_model %>%
       aes(
         ymin = lower ,
         ymax = upper ,
-        group = interaction(type, Age),
+        group = interaction(type, age),
         linetype = type,
-        color = Age
+        color = age
       ),
       position = position_dodge(width =  0.5),
       width =  0.4,
@@ -121,13 +118,16 @@ AR_plot_VJ = AR_model %>%
     labs(x = " ", y = "Symptomatic attack rate (%)") +
     scale_color_brewer(palette = "Accent") +
     guides(shape = "none",
-           linetype = "none")
+           linetype = "none") +
+  facet_wrap(~serostatus) +
+  scale_color_manual(values = age_fill) 
+  
 
 
 ggsave(
   plot = cowplot::plot_grid(
     AR_plot_BVK,
-    AR_plot_VJ,
+    AR_plot_BVJ,
     labels = c("a", "b"),
     ncol = 1),
   filename = paste0(file_path, "/AR.png"),
@@ -151,25 +151,25 @@ VE_model = extract_BUT_model_results(VE)
 # plot VE by serostatus for each serotype --------------------------------------
 
 VE_BKJT =  VE_model %>%
-  separate(name, into = c("Serostatus","Serotype","Age", "Month")) %>% 
-  mutate(Serostatus = factor(Serostatus, levels = 1:3,
+  separate(name, into = c("serostatus","serotype","age", "month")) %>% 
+  mutate(serostatus = factor(serostatus, levels = 1:3,
                              labels = c("seronegative", "monotypic", "multitypic")),
-         Age = factor(Age, labels = c("2-6yrs", "7-17yrs", "18-59yrs"),
+         age = factor(age, labels = c("2-6yrs", "7-17yrs", "18-59yrs"),
                       levels = 1:3),
-         Serotype = factor(Serotype, levels = 1:2, labels = c(paste0("DENV", 1:2)))) %>% 
-    mutate(Month = as.numeric(Month)) 
+         serotype = factor(serotype, levels = 1:2, labels = c(paste0("DENV", 1:2)))) %>% 
+    mutate(month = as.numeric(month)) 
   
 VE_plot = VE_BKJT %>% 
-  filter(Serostatus != "multitypic") %>% 
-  ggplot(aes(x = Month , y = mean)) +
-  geom_line(aes(color = Serotype)) +
+  filter(serostatus != "multitypic") %>% 
+  ggplot(aes(x = month , y = mean)) +
+  geom_line(aes(color = serotype)) +
   geom_ribbon(aes( ymin = lower, ymax = upper,
-        fill = Serotype), alpha = 0.5) +
+        fill = serotype), alpha = 0.5) +
   labs(x = "Month", y = "Vaccine Efficacy (%)") +
   scale_x_continuous(breaks = seq(0, 24, 12)) +
-  facet_grid(Serostatus~Age) + 
+  facet_grid(serostatus~age) + 
   theme_light() +
-  theme(legend.position = "top")+
+  theme(legend.position = "top") + 
   scale_color_brewer(palette = "Paired") +
   scale_fill_brewer(palette = "Paired") 
   
@@ -185,15 +185,15 @@ VE_plot = VE_BKJT %>%
   
 if(include_beta == 0){
   VE_plot2 = VE_BKJT %>% 
-    filter(Serostatus != "multitypic") %>% 
-    filter(Age == "2-6yrs") %>%  
+    filter(serostatus != "multitypic") %>% 
+    filter(age == "2-6yrs") %>%  
     ggplot(aes(x = Month , y = mean)) +
-    geom_line(aes(color = Serotype)) +
+    geom_line(aes(color = serotype)) +
     geom_ribbon(aes( ymin = lower, ymax = upper,
-                     fill = Serotype), alpha = 0.5) +
-    labs(x = "Month", y = "Vaccine Efficacy (%)") +
+                     fill = serotype), alpha = 0.5) +
+    labs(x = "Month", y = "Vaccine efficacy (%)") +
     scale_x_continuous(breaks = seq(0, 24, 12)) +
-    facet_grid(~Serostatus) + 
+    facet_grid(~serostatus) + 
     theme_light() +
     theme(legend.position = "top")+
     scale_color_brewer(palette = "Paired") +
@@ -259,13 +259,9 @@ ggsave(
 }
 
 # function to plot everything --------------------------------------------------
-plot_BUT_output = function(age_cases,
-                           serotype_serostatus_cases,
+plot_BUT_output = function(cases,
                            file_path,
-                           include_beta,
-                           AR = NULL,
-                           VE = NULL,
-                           n = NULL) {
+                           include_beta) {
   
   library(tidyverse)
   library(Hmisc)
@@ -282,28 +278,22 @@ plot_BUT_output = function(age_cases,
         legend.margin = margin(0, 0, 0, 0)
       ))
   
-  if (is.null(AR)) {
+
     AR = readRDS(paste0(file_path, "/AR.RDS"))
-  }
-  if (is.null(VE)) {
     VE = readRDS(paste0(file_path, "/VE.RDS"))
-  }
-  if (is.null(n)) {
     n = readRDS(paste0(file_path, "/n.RDS"))
-  }
 
 # plot attack rates 
 plot_BUT_attack_rate(
-  age_cases = age_cases,
-  serotype_serostatus_cases = serotype_serostatus_cases,
+  cases = cases,
   file_path = file_path,
-  AR = AR,
+  AR = AR
   )
   
 # plot VE
-plot_BUT_VE(file_path = file_path, 
-        VE = VE, 
-        include_beta=include_beta)
+plot_BUT_VE(file_path = file_path,
+            VE = VE,
+            include_beta = include_beta)
   
 # plot VE
 plot_BUT_titres(file_path = file_path, n = n)
