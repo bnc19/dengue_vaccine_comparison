@@ -7,6 +7,11 @@ library(tidyverse)
 library(Hmisc)
 library(wesanderson)
 
+# colours 
+age_fill_VE = scales::brewer_pal(palette = "Blues")(4)[c(2,4)]
+age_fill_AR = scales::brewer_pal(palette = "Blues")(4)[2:4]
+serotype_fill = scales::brewer_pal(palette = "RdPu")(6)[2:5] 
+trial_fill = scales::brewer_pal(palette = "PuBuGn")(3)[2:3]
 
 
 # source files 
@@ -39,7 +44,8 @@ theme_set(
       text = element_text(size = 14),
       legend.spacing.y = unit(0, "pt"),
       legend.margin = margin(0, 0, 0, 0),
-      legend.position = c(0.86,0.25), 
+      # legend.position = c(0.86,0.25),  CHANGE TO THIS IS PLOTTING VE AND AR TOGETHER 
+      legend.position = c(0.9,0.75), 
       legend.title = element_blank()
     ))
 
@@ -56,13 +62,15 @@ VE_plot =  VE_model %>%
     Month = as.numeric(Month),
     Serostatus = factor(Serostatus, labels = c("seronegative", "monotypic", "multitypic"))) %>% 
   ggplot(aes(x = Month , y = mean)) +
-  geom_line(aes(color = Serostatus)) +
-  geom_ribbon(aes(ymin = lower, ymax = upper, fill = Serostatus), alpha = 0.5) +
+  geom_line(aes(color = Age)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper, fill = Age), alpha = 0.5) +
   labs(x = "Month", y = "Vaccine efficacy (%)") +
   scale_x_continuous(breaks = seq(0, 54,12)) +
   geom_hline(yintercept=0, linetype="dashed",color = "black", linewidth=1) +
-  facet_grid(Age+Outcome ~ Serotype ) +
-  theme(legend.position = c(0.07,0.07))
+  facet_grid(Serostatus+Outcome ~ Serotype, scale= "free" ) +
+  theme(legend.position = c(0.07,0.07)) +
+  scale_color_manual(values = age_fill_VE)+
+  scale_fill_manual(values = age_fill_VE)
   
 
 # Plot AR  across time 
@@ -99,8 +107,9 @@ time_plot =  AR_model %>%
     position = position_dodge(width = 5),width =  0.4,linewidth =1) +
   labs(x = "Month", y = "Attack rate (%)") +
   scale_x_continuous(breaks = c(12,18,24,36,48,54)) +
-  scale_color_manual(values = wes_palette("FantasticFox1")[c(1, 3)]) +
-  facet_wrap(~ outcome , ncol=1)
+  scale_color_manual(values = trial_fill) +
+  facet_wrap(~ outcome, ncol = 2) # CHANGE TO 1 IF PLOTTING AR AND VE TOGETHER 
+
 
 # Plot AR by age and trial and serostatus 
 
@@ -136,8 +145,9 @@ age_plot =  AR_model %>%
       width =  0.4,
       linewidth = 1
     ) +
-    labs(x = " ", y ="" ) +
-  scale_color_brewer(palette = "Accent") +
+    # labs(x = " ", y ="" ) +  # CHANGE IF PLOTTING AR AND VE TOGETHER 
+  labs(x = " ", y = "Attack rate (%)") +
+  scale_color_manual(values = age_fill_AR) +
   scale_x_discrete(
       labels  = c(
         "placebo \nseronegative",
@@ -147,8 +157,8 @@ age_plot =  AR_model %>%
       )) +
     guides(shape = "none",
            linetype = "none")+
-  facet_wrap(~ outcome , ncol=1)
-
+  facet_wrap(~ outcome, ncol=2) # CHANGE TO 1 IF PLOTTING AR AND VE TOGETHER 
+  
 
 # Plot AR by serotype and trial and serostatus 
 
@@ -190,8 +200,9 @@ serotype_plot = AR_model %>%
       width =  0.4,
       linewidth = 1
     ) +
-    labs(x = " ", y ="" ) +
-  scale_color_brewer(palette = "Set2") +
+      # labs(x = "Month", y = "Attack rate (%)") + # CHANGE IF PLOTTING AR AND VE TOGETHER 
+  labs(x = " ", y = "Attack rate (%)") +
+  scale_color_manual(values = serotype_fill) +
   scale_x_discrete(
     labels  = c(
       "placebo \nseronegative",
@@ -200,7 +211,7 @@ serotype_plot = AR_model %>%
       "vaccine \nseropositive")) +
     guides(shape = "none",
            linetype = "none")+
-  facet_wrap(~ outcome , ncol=1)
+  facet_wrap(~ outcome, ncol=2) # CHANGE TO 1 IF PLOTTING AR AND VE TOGETHER 
 
 # combine all plots 
 g1 = cowplot::plot_grid(time_plot, age_plot, 
@@ -213,11 +224,39 @@ g2 = cowplot::plot_grid(g1, VE_plot, rel_heights = c(1,1.8),
 
 ggsave(
   plot = g2,
-  filename =  "TAK/output/figures/main_fit_ve_fig.png",
+  filename =  "TAK/output/figures/main_fit_ve_fig_T.png",
+  height = 45,
+  width = 50,
+  units = "cm",
+  dpi = 600,
+  scale = 0.75
+)
+ 
+
+# save sep plots 
+g3 = cowplot::plot_grid(time_plot, age_plot, 
+                        serotype_plot, ncol=1, 
+                        axis = "tblr", align = "h",
+                        labels = c("a", "b", "c"))
+
+
+
+ggsave(
+  plot = g3,
+  filename =  "TAK/output/figures/main_fit_T.png",
+  height = 35,
+  width = 32,
+  units = "cm",
+  dpi = 600,
+  scale = 0.75
+)
+
+ggsave(
+  plot = VE_plot,
+  filename =  "TAK/output/figures/VE_T.png",
   height = 40,
   width = 45,
   units = "cm",
   dpi = 600,
   scale = 0.75
 )
- 
