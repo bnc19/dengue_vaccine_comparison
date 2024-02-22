@@ -9,7 +9,6 @@ n_param = c(37,40,34,34,35,
             32,34,34,34,31,
             34,34,31)
 
-
 # read waic
 index_files = which(grepl("M", list.files(path = "CYD/output/")))
 source_files = paste0("CYD/output/", list.files(path = "CYD/output/")[index_files], "/WAIC.RDS")
@@ -20,7 +19,6 @@ WAIC2 = WAIC[as.character(sort(as.numeric(n1)))]
 
 # compare WAIC
 comp_WAIC = loo::loo_compare(WAIC2) # M12 
-
 
 # extract waic and elpd 
 waic_df = comp_WAIC %>%  
@@ -87,7 +85,6 @@ d[8:13,7] = "global"
 # kappa
 d[9:11, 8] = "global"
 
-
 # add log lik to dependency matrix 
 d$model = models
 
@@ -111,8 +108,6 @@ df = left_join(d, ll) %>%
         "not included"
       ) )) %>%
   mutate(color = ifelse(model == 12, "red", "black"))
-
-
 
 mycols = c("#A6BDDB", "#1C9099", "#6BAED6",
            "#666699", "#FBB4B9", 
