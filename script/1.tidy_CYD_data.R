@@ -5,7 +5,12 @@ library(cowplot)
 library(readxl)
 library(wesanderson)
 source("CYD/R/factor_data.R")
- 
+
+# colours 
+age_fill = scales::brewer_pal(palette = "Blues")(4)[c(2,4)]
+serotype_fill = c(scales::brewer_pal(palette = "RdPu")(6)[2:5], "#CCCCCC") 
+trial_fill = scales::brewer_pal(palette = "PuBuGn")(3)[2:3]
+
 # read in titres 
 raw_titres = read_excel("CYD/data/raw/titres.xlsx")
 
@@ -176,7 +181,7 @@ Ho_BVJD_plot = Ho_BVJD %>%
   geom_bar(aes(fill = age), position = "stack", stat = "identity") +
   ylab("Hospitalised cases") + xlab("Month") +
   scale_y_continuous(limits = c(0,80), breaks = seq(0,80,20)) +
-  scale_fill_brewer(palette = "Accent") +
+  scale_fill_manual(values = age_fill) +
   facet_grid(serostatus~arm) +
   theme(legend.position = c(0.1,0.8))
 
@@ -189,7 +194,7 @@ Ho_BVKJ_plot = Ho_BVKJ %>%
   geom_bar(aes(fill = age), position = "stack", stat = "identity") +
   ylab(" ") + xlab("Serotype") +
   scale_y_continuous(limits = c(0,80), breaks = seq(0,80,20)) +
-  scale_fill_brewer(palette = "Accent") +
+  scale_fill_manual(values = age_fill) +
   facet_grid(serostatus~arm) +
   theme(legend.position = "none") 
 
@@ -202,7 +207,7 @@ Sy_BVJ_plot  = Sy_BVJ %>%
   geom_bar(aes(fill = age), position = "stack", stat = "identity") +
   ylab("Symptomatic cases") + xlab("Serostatus") +
   scale_y_continuous(limits = c(0,280), breaks = seq(0,280,50)) +
-  scale_fill_brewer(palette = "Accent") +
+  scale_fill_manual(values = age_fill) +
   facet_grid(~arm) +
   theme(legend.position = "none")
 
@@ -215,7 +220,7 @@ Sy_VK_plot = Sy_VK %>%
   geom_bar(aes(fill = arm), position = "stack", stat = "identity") +
   ylab(" ") + xlab("Serotype") +
   scale_y_continuous(limits = c(0,250), breaks = seq(0,250,50)) +
-  scale_fill_manual(values =wes_palette("Darjeeling2")) +
+  scale_fill_manual(values = trial_fill) +
   theme(legend.position = c(0.9,0.8))
 
 # Se VJD 
@@ -228,13 +233,10 @@ Se_VJD_plot = Se_VJD %>%
   facet_grid(~ age) +
   ylab("Severe cases") + xlab("Month") +
   scale_y_continuous(limits = c(0,10), breaks = seq(0,10,2)) +
-  scale_fill_manual(values =wes_palette("Darjeeling2")) +
+  scale_fill_manual(values = trial_fill) +
   theme(legend.position = "none")
 
 # Se BVKJ 
-
-# extract colours as serotype includes all and number 5 is garish 
-my_cols = RColorBrewer::brewer.pal(n = 8, name = "Set2")[c(1:4, 8)]
 
 Se_BVKJ = cases_final %>% 
   filter(outcome == "Se", time == "all") 
@@ -245,7 +247,7 @@ Se_BVKJ_plot = Se_BVKJ %>%
   facet_grid(arm ~ age) +
   ylab(" ") + xlab("Month") +
   scale_y_continuous(limits = c(0,60), breaks = seq(0,60,10)) +
-  scale_fill_manual(values = my_cols) +
+  scale_fill_manual(values = serotype_fill) +
   theme(legend.position = c(0.1,0.8))
 
 
