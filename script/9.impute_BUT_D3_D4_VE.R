@@ -9,6 +9,7 @@ titres = readxl::read_excel("BUT/data/raw/titres.xlsx")
 
 # colours 
 serotype_fill = scales::brewer_pal(palette = "RdPu")(6)[2:5] 
+fill = c("#FA9FB5", "#A1D99B")
 
 mu = titres %>% 
   pivot_wider(names_from = Serotype, values_from = Titre) %>% 
@@ -70,8 +71,6 @@ for(c in 1:C){
           M7_RR_symp[c,k,t,i] =  1 / (1 +  (n_C[c,k,t] / (M7_nc50[c,k,i]))^M7_post_sample$w.1.[i]) 
         }}}}                                
 
-
-
 M7_VacE = array(NA, dim=c(C,K,T,I))
 
 for(c in 1:C){
@@ -82,7 +81,7 @@ for(c in 1:C){
       }}}}    
 
 
-M7_VE= M7_VacE %>%  
+M7_VE = M7_VacE %>%  
   reshape2::melt() %>% 
   rename("serostatus" = Var1, "serotype"= Var2, "time"= Var3) %>% 
   mutate(value = value * 100) %>%  
@@ -184,3 +183,38 @@ M8_VacE = array(NA, dim=c(C,K,T,I))
     dpi = 600,
     scale = 0.8
   )
+  
+# Plot both side by side -------------------------------------------------------
+
+plot_together =  M8_VE %>%  
+    mutate(model = "M8") %>% 
+    bind_rows((mutate(M7_VE, model = "M7"))) %>%  
+    ungroup() %>%  
+    mutate(serotype = factor(serotype,
+                             labels = c("DENV1", "DENV2", "DENV3", "DENV4")),
+           serostatus = factor(serostatus, 
+                               labels = c("seronegative", "monotypic", "multitypic"))) %>% 
+    ggplot(aes(x = time , y = mean)) +
+    geom_line(aes(color = model)) +
+    geom_ribbon( aes( ymin = lower, ymax = upper, fill = model), alpha = 0.5) +
+    labs(x = "Month", y = "Vaccine efficacy (%)") +
+    facet_grid(serostatus ~ serotype ) + theme_light() + 
+    theme(text = element_text(size = 16), 
+          legend.position = c(0.1,0.1),
+          legend.title = element_blank()) +
+    scale_fill_manual(values = fill) +
+    scale_color_manual(values = fill) +
+    scale_x_continuous(limits = c(0,24), breaks = seq(0,24,6)) +
+    scale_y_continuous(limits = c(0,100)) 
+
+  
+  ggsave(
+    plot = plot_together,
+    filename =  "BUT/output/figures/both_imputed_VE_plot.png",
+    height = 30,
+    width = 40,
+    units = "cm",
+    dpi = 600,
+    scale = 0.8
+  )
+    
