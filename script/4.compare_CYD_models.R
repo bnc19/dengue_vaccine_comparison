@@ -182,13 +182,20 @@ ggsave(g1, file = "CYD/output/figures/model_variants_C.jpg",
        height = 40, width = 50, units="cm", scale = 0.7)
 
 
+################################################################################
+##################          Compare severe model              ##################       
+################################################################################
+
 index_files_sev = which(grepl("M", list.files(path = "CYD/output/severe/")))
 source_files_sev = paste0("CYD/output/severe/", 
                           list.files(path = "CYD/output/severe/")[index_files_sev], "/WAIC.RDS")
+
 WAIC_sev = (lapply(source_files_sev, readRDS))
 
 
-n_param_sev = c(35,36,36, 37, 38, 39, 37)
+n_param_sev = c(35, 32, 33, 33, 34, 
+                35, 36, 34, 35, 39, 
+                39, 38)
 # compare WAIC
 comp_WAIC_sev = loo::loo_compare(WAIC_sev) # models start from M0 so subtract 1 from best fitting 
 
