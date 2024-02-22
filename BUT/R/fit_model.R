@@ -32,6 +32,7 @@ run_BUT_model = function(n_it = 4000,
                      M = 4,
                      HI = 12,
                      include_pK3=0,
+                     single_lc = 0, 
                      include_beta=0,
                      mono_lc_SN=0,
                      mono_lc_MU=0,
@@ -42,6 +43,7 @@ run_BUT_model = function(n_it = 4000,
                      L_sd=1,
                      lower_bound_L=0,
                      MU_test_SN=0,
+                     inc_FOIJ = 0, 
                      MU_symp=1,
                      enhancement=1,
                      sens = 0.91,
@@ -94,8 +96,8 @@ VCD_BVK = serotype_serostatus_cases %>%
   arrange(Serostatus, Arm, Serotype) %>%  
   pull(Y)
 
-VCD_VJ = age_cases %>% 
-  arrange(Arm, Age) %>%  
+VCD_BVJ = cases$Sy_BVJ %>% 
+  arrange(serostatus, arm, age) %>%  
   pull(Y)
 
 pop_BV = serotype_serostatus_cases %>% 
@@ -139,15 +141,17 @@ T = length(time)
     rho_K=rho_K,
     L_K=L_K,
     w_CK=w_CK,
+    inc_FOIJ =inc_FOIJ, 
     L_mean=L_mean,
     L_sd=L_sd,
     lower_bound_L=lower_bound_L,
     MU_test_SN=MU_test_SN,
     MU_symp=MU_symp,
     enhancement=enhancement,
-    SP = sum(baseline_seropos$SP), 
-    pop_J = pull(pop, N), 
-    VCD = sum(age_cases$Y), 
+    single_lc = single_lc, 
+    SP_J = SP_J, 
+    pop_J = pop_J, 
+    VCD = sum(cases$Sy_BVJ$Y), 
     VCD_BVK = VCD_BVK, 
     VCD_VJ = VCD_VJ,
     pop_BV = pop_BV,
