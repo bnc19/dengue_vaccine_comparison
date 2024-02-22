@@ -15,17 +15,15 @@ data{
    real<lower = 0, upper = 1> spec ;           // baseline test specificity 
    int<lower = 0> HI; // period of heterotypic immunity
    
-   int<lower=0> SP;     // baseline seropositive
+   array[J] int<lower=0> SP_J; // baseline seropositive 
    array[J] int<lower=0> pop_J;    // baseline pop
    int<lower=0> VCD;    // total VCD 
    array[B*V*K] int<lower=0> VCD_BVK;  // VCD 
-   array[V*J]   int<lower=0> VCD_VJ;   // VCD 
-   array[V,J] int<lower=0> pop_VJ;   // pop 
-   array[B,V] int<lower=0> pop_BV;   // pop 
+   array[B*V*J] int<lower=0> VCD_BVJ;   // VCD 
+   array[B,V,J] int<lower=0> pop_BVJ;   // pop 
    int<lower=0> pop;   // total pop 
    
    // FLAGS
-   int<lower = 0, upper = 1> include_pK3;      // include serotype specific p? (T/F)
    int<lower = 0, upper = 1> single_lc;        // 0 for serostatus and or serotype lc50 based on other flags / 1 for single lc50 
    int<lower = 0, upper = 2> include_beta;     // 0 if no age-specific nc50, 1= change age groups 1 and 2, 2 = change age grp 1 
    int<lower = 0, upper = 2> mono_lc_SN;       // 0 for serotype specific lc SN / 1 for single / 2 for serotype-specific lc MO with kappa offset  
@@ -45,7 +43,6 @@ data{
 parameters{
   array [K] real<lower = 0> lambda_K;         // foi  
   array [J] real<lower = 0, upper = 1> p;     // probability of exposure before T0
-  array [M] real<lower = 0, upper = 1> pK3;   // serotype-specific p in age group 3
   real<lower = 0, upper = 1> gamma;           // prob symp 1' 
   array [K] real<lower = 0> rho;              // risk symp 2' rel to 1'
   real<lower = 0, upper = 1> phi;             // prob symp 3'/4' rel to 1'
@@ -70,7 +67,7 @@ transformed parameters{
 
   // matrix distribution of cases
   vector [B*V*K]   mD_BVK ;    
-  vector [V*J]     mD_VJ  ;  
+  vector [B*V*J]   mD_BVJ  ;  
   
   real<lower=0> shape1; // pk2 prior
   real<lower=0> shape2; 
@@ -78,16 +75,13 @@ transformed parameters{
   //  distribution of cases
   real<lower=0, upper=1> pC;
   
- real NSP[J];
- real av_pSP; 
-  
   { // this { defines a block within which variables declared are local (can't have lower or upper)
   
   real lambda_m;
   real pm; 
   
-  // contrain pk2 / p by lambda 
-  lambda_m = mean(lambda_K);
+  // p by lambda 
+  lambda_m = mean(lambda_K); // mean across D1 and D1
   pm = 1-exp(-38.5*12*lambda_m); // always prob exposure to a single serotype 
  
   if(pm<1e-3) pm=1e-3;
@@ -99,11 +93,7 @@ transformed parameters{
   vector[K] rhoT; // keep code simple by always referring to vector length K
   vector[K] gammaT;
   vector[K] phiT;
-
-  real hK3[M]; // age3 historic hazard
-  real q[M];   // historic serotype proportion 
-  real hK2[M]; // age1 historic hazard 
-  real hK1[M]; // age1 historic hazard 
+  
   real p_KJ[M,J]; // serotype age prob exposure 
   
   array [J] real TpSN;              // true SN
@@ -133,13 +123,13 @@ transformed parameters{
   array [B,V,K,J]   real Di;
   
   // cases 
-  array [K,J]     real Sy_KJ;
+  array [K,J]   real Sy_KJ;
   array [J]     real Sy_J;
   real Sy;
   
   // prop cases
   array [B,V,K]   real pD_BVK; 
-  array [V,J]     real pD_VJ; 
+  array [B,V,J]   real pD_BVJ; 
 
 // BIPHASIC TITRES 
 
@@ -182,28 +172,8 @@ if(rho_K==1) {
       
       
 // INITIAL CONDITIONS
-if(include_pK3 == 0) {  // p common to all serotypes
-  for(m in 1:M){
-    for(j in 1:J) p_KJ[m,j] = p[j]; // if include_pK3 == 0, all p are prob exposure to a single serotype 
-    hK3[m] = 0;
-    q[m] = 0;
-    hK1[m] = 0;
-    hK2[m] = 0;
-    }
- } else { // serotype-specific p
-  for(m in 1:M) hK3[m] = -log(1-pK3[m]) ; // pK3 prob exposure to serotype k 
-  real shK3;
-  shK3=sum(hK3);
-  for(m in 1:M) {
-    q[m] = hK3[m] / shK3 ;
-    hK1[m] = q[m] * -log(1-p[1]) ; // if include_pK3 == 1, p1 and p2 is cumulative prob exposure 
-    hK2[m] = q[m] * -log(1-p[2]) ;
-    p_KJ[m,1] = 1 - exp(-hK1[m]) ;
-    p_KJ[m,2] = 1 - exp(-hK2[m]) ;
-    p_KJ[m,3] = pK3[m];
-  }
-}
-
+for(m in 1:M)
+ for(j in 1:J) p_KJ[m,j] = p[j] ; 
 
 // this defines the true serostatus populations 
  for(j in 1:J){
@@ -393,10 +363,12 @@ for(b in 1:B)
     for(t in 1:T) pMO[b,v,2,j,(t+1)] = lambda[1,j,t] * pMO[b,v,2,j,t] ; // escape 1 
     for(t in 1:T) pMO[b,v,3,j,(t+1)] = lambda[1,j,t]*lambda[2,j,t] * pMO[b,v,3,j,t] ; // escape 1 and 2 
     for(t in 1:T) pMO[b,v,4,j,(t+1)] = lambda[1,j,t]*lambda[2,j,t] * pMO[b,v,4,j,t] ; // escape 1 and 2 
-    for(t in (HI+1):T) pMO[b,v,1,j,(t+1)] += (1- lambda[1,j,(t-HI)]) * pSN[b,v,j,(t-HI)] ; // new D1 and D2 infections during trial
-    for(t in (HI+1):T) pMO[b,v,2,j,(t+1)] += (1- lambda[2,j,(t-HI)]) * pSN[b,v,j,(t-HI)] ;
-    }  
-   
+    
+    for(t in (HI+1):T) 
+     for(k in 1:K) pMO[b,v,k,j,(t+1)] += (1 - gammaT[k] * RR_symp[1,v,k,j,(t-HI)]) * (1 - lambda[k,j,(t - HI)]) * pSN[b,v,j,(t-HI)] ; // new D1 and D2 infections during trial
+    }
+    
+    
 for(b in 1:B)
  for(v in 1:V)
    for(j in 1:J) {
@@ -414,17 +386,17 @@ for(b in 1:B)
           // MU_34
           pMU2[b,v,6,j,(t+1)] = lambda[1,j,t] * lambda[2,j,t] *  pMU2[b,v,6,j,t] ; 
       }
-      for(t in (HI+1):T) { // new D1 and D2 infections 
+       for(t in (HI+1):T) { // new D1 and D2 infections 
           // MU_12
-          pMU2[b,v,1,j,(t+1)] += (1-lambda[1,j,(t-HI)]) * pMO[b,v,2,j,(t-HI)] + (1-lambda[2,j,(t-HI)]) * pMO[b,v,1,j,(t-HI)] ;
+          pMU2[b,v,1,j,(t+1)] += (1 - gammaT[1] * rhoT[1] * RR_symp[2,v,1,j,(t-HI)]) * (1 - lambda[1,j,(t-HI)]) * pMO[b,v,2,j,(t-HI)] + (1 - gammaT[2] * rhoT[2] * RR_symp[2,v,2,j,(t-HI)]) *  (1-lambda[2,j,(t-HI)]) * pMO[b,v,1,j,(t-HI)] ;
           // MU_13
-          pMU2[b,v,2,j,(t+1)] += (1-lambda[1,j,(t-HI)]) * pMO[b,v,3,j,(t-HI)] ;
+          pMU2[b,v,2,j,(t+1)] += (1 - gammaT[1] * rhoT[1] * RR_symp[2,v,1,j,(t-HI)]) * (1 - lambda[1,j,(t-HI)]) * pMO[b,v,3,j,(t-HI)] ;
           // MU_14
-          pMU2[b,v,3,j,(t+1)] += (1-lambda[1,j,(t-HI)]) * pMO[b,v,4,j,(t-HI)] ;
+          pMU2[b,v,3,j,(t+1)] += (1 - gammaT[1] * rhoT[1] * RR_symp[2,v,1,j,(t-HI)]) * (1 - lambda[1,j,(t-HI)]) * pMO[b,v,4,j,(t-HI)] ;
           // MU_23
-          pMU2[b,v,4,j,(t+1)] += (1-lambda[2,j,(t-HI)]) * pMO[b,v,3,j,(t-HI)]  ;
+          pMU2[b,v,4,j,(t+1)] += (1 - gammaT[2] * rhoT[2] * RR_symp[2,v,2,j,(t-HI)]) * (1 - lambda[2,j,(t-HI)]) * pMO[b,v,3,j,(t-HI)]  ;
           // MU_24
-          pMU2[b,v,5,j,(t+1)] +=  (1-lambda[2,j,(t-HI)]) * pMO[b,v,4,j,(t-HI)] ;
+          pMU2[b,v,5,j,(t+1)] += (1 - gammaT[2] * rhoT[2] * RR_symp[2,v,2,j,(t-HI)]) * (1 - lambda[2,j,(t-HI)]) * pMO[b,v,4,j,(t-HI)] ;
         }}
 
 for(b in 1:B)
@@ -440,15 +412,15 @@ for(b in 1:B)
         // MU3 -4
         pMU3[b,v,4,j,(t+1)] = pMU3[b,v,4,j,t] ; 
      }
-     for(t in (HI+1):T) {
+    for(t in (HI+1):T) {
         // MU3 -1 
-        pMU3[b,v,1,j,(t+1)] +=  (1-lambda[2,j,(t-HI)]) * pMU2[b,v,6,j,(t-HI)] ; // 34 then 2 infection 
-        // MU3 -2 
-        pMU3[b,v,2,j,(t+1)] +=  (1-lambda[1,j,(t-HI)]) * pMU2[b,v,6,j,(t-HI)] ; // 34 then 1 infection 
+        pMU3[b,v,1,j,(t+1)] +=  (1 - phiT[2] * gammaT[2] * RR_symp[3,v,2,j,(t-HI)]) * (1-lambda[2,j,(t-HI)]) * pMU2[b,v,6,j,(t-HI)] ; // 34 then 2 infection 
+        // MU3 -2           
+        pMU3[b,v,2,j,(t+1)] +=  (1 - phiT[1] * gammaT[1] * RR_symp[3,v,1,j,(t-HI)]) * (1-lambda[1,j,(t-HI)]) * pMU2[b,v,6,j,(t-HI)] ; // 34 then 1 infection 
         // MU3 -3
-        pMU3[b,v,3,j,(t+1)] +=  (1-lambda[2,j,(t-HI)]) * pMU2[b,v,3,j,(t-HI)] + (1-lambda[1,j,(t-HI)]) * pMU2[b,v,5,j,(t-HI)] ;  // 14 then 2 or 24 then 1 
+        pMU3[b,v,3,j,(t+1)] +=  (1 - phiT[2] * gammaT[2] * RR_symp[3,v,2,j,(t-HI)]) * (1-lambda[2,j,(t-HI)]) * pMU2[b,v,3,j,(t-HI)] + (1 - phiT[1] * gammaT[1] * RR_symp[3,v,1,j,(t-HI)]) * (1-lambda[1,j,(t-HI)]) * pMU2[b,v,5,j,(t-HI)] ;  // 14 then 2 or 24 then 1 
         // MU3 -4
-        pMU3[b,v,4,j,(t+1)] += (1-lambda[2,j,(t-HI)]) * pMU2[b,v,2,j,(t-HI)] + (1-lambda[1,j,(t-HI)]) * pMU2[b,v,4,j,(t-HI)] ;  // 13 then 2 or 23 then 1 
+        pMU3[b,v,4,j,(t+1)] +=  (1 - phiT[2] * gammaT[2] * RR_symp[3,v,2,j,(t-HI)]) * (1-lambda[2,j,(t-HI)]) * pMU2[b,v,2,j,(t-HI)] + (1 - phiT[1] * gammaT[1] * RR_symp[3,v,1,j,(t-HI)]) * (1-lambda[1,j,(t-HI)]) * pMU2[b,v,4,j,(t-HI)] ;  // 13 then 2 or 23 then 1 
       }
     }  
 
@@ -483,7 +455,7 @@ for(b in 1:B)
  for(v in 1:V) 
   for(k in 1:K)
    for(j in 1:J) 
-          Sy_BVKJ[b,v,k,j] = Di[b,v,k,j] * pop_VJ[v,j]; 
+          Sy_BVKJ[b,v,k,j] = Di[b,v,k,j] * sum(pop_BVJ[ ,v,j]); 
 
 // sum over symp
 for(v in 1:V) 
@@ -504,7 +476,7 @@ for(b in 1:B)
    for(k in 1:K)
     for(j in 1:J){
   pD_BVK[b,v,k] = sum(Sy_BVKJ[b,v,k, ]) / Sy ; // serotype serostatus symp
-  pD_VJ[v,j]  = sum(Sy_VKJ[v, ,j]) / Sy ;   // age symp 
+  pD_BVJ[b,v,j] = sum(Sy_BVKJ[b,v, ,j]) / Sy ;   // age serostatus symp 
   }
 
 // matrix for likelihood function 
@@ -517,52 +489,36 @@ for(k in 1:K){ // 2 serotypes
 }
 
 for(j in 1:J){ // 3 ages 
-   mD_VJ[j]     =  pD_VJ[1,j]; //  C 
-   mD_VJ[j+3]   =  pD_VJ[2,j]; //  V
+   mD_BVJ[j]     =  pD_BVJ[1,1,j]; //  SN C 
+   mD_BVJ[j+3]   =  pD_BVJ[1,2,j]; //  SN V
+   mD_BVJ[j+6]   =  pD_BVJ[2,1,j]; //  SP C 
+   mD_BVJ[j+9]   =  pD_BVJ[2,2,j]; //  SP V
   }
   
  pC = Sy / pop; 
 
-for(j in 1:J) NSP[j] = pSP[j] * pop_J[j] ; 
- av_pSP = sum(NSP) / sum(pop_J); 
-
 // log likelihood 
  ll=0;
- ll += binomial_lpmf(SP | sum(pop_J), av_pSP);
- ll += binomial_lpmf(VCD   | pop, pC);
- ll += multinomial_lpmf(VCD_BVK   | mD_BVK) ;
- ll += multinomial_lpmf(VCD_VJ  | mD_VJ) ;
+ ll += binomial_lpmf(SP_J | pop_J, pSP);
+ ll += binomial_lpmf(VCD  | pop, pC);
+ ll += multinomial_lpmf(VCD_BVK  | mD_BVK) ;
+ ll += multinomial_lpmf(VCD_BVJ  | mD_BVJ) ;
  
 }
 }
 
 model {
-  target += ll;
-// priors
+ 
+ target += ll;
 
-// Use TAK-003 posterior as priors 
-  // hs[1] ~ normal(1.9,0.48);  // SN
-  // hs[2] ~ normal(4.3,0.47);  // SP
-  // hl ~ normal(73.5,13.4);   
-  // ts[1] ~ normal(-2.12,0.5) ;
-  // ts[2] ~ normal(0.31,0.5) ;
+// priors
   p[1] ~ beta(3,5);
   p[2] ~ beta(3,5);
-
-  if(include_pK3==1) {
-  pK3 ~ beta(shape1,shape2) ; // prob exposure to serotype k 
-  p[3] ~ beta(3,5) ;
-  } else {
-  pK3 ~ beta(3,5) ;
   p[3] ~ beta(shape1,shape2) ; // prob exposure to a serotype   
-  }
-  
   lambda_K ~ lognormal(-7,2);
-  
   gamma ~ normal(0.85,0.2);  // prob secondary
   rho ~ normal(1.97,0.40);   // RR secondary
   phi ~ normal(0.25,0.05);
-
   L ~ normal(L_mean,L_sd);
   w ~ normal(1,2);
   lc[1,] ~ normal(5.18,1);
@@ -575,29 +531,30 @@ model {
 
 generated quantities{
 // AR
-array [B,V,K]   real<lower = 0 > AR_BVK ;
-array [V,J]     real<lower = 0 > AR_VJ ;
+array [B,V,K] real<lower = 0 > AR_BVK ;
+array [B,V,J] real<lower = 0 > AR_BVJ ;
 
 // VE
 array [C,K,J,T] real<upper =1 > VE  ;
   
 // log lik
-vector [4] log_lik;
+vector [6] log_lik;
 
-log_lik[1] = binomial_lpmf(SP | sum(pop_J), av_pSP);
-log_lik[2] = binomial_lpmf(VCD   | pop, pC);
-log_lik[3] = multinomial_lpmf(VCD_BVK   | mD_BVK) ;
-log_lik[4] = multinomial_lpmf(VCD_VJ  | mD_VJ) ;
+for(j in 1:J) log_lik[j] = binomial_lpmf(SP_J[j] | pop_J[j], pSP[j]);
+log_lik[4] = binomial_lpmf(VCD   | pop, pC);
+log_lik[5] = multinomial_lpmf(VCD_BVK  | mD_BVK) ;
+log_lik[6] = multinomial_lpmf(VCD_BVJ  | mD_BVJ) ;
 
 // Attack rates
 for(b in 1:B)
  for(v in 1:V)
   for(k in 1:K)
-   AR_BVK[b,v,k] = sum(Sy_BVKJ[b,v,k, ]) / pop_BV[b,v]; 
+   AR_BVK[b,v,k] = sum(Sy_BVKJ[b,v,k, ]) / sum(pop_BVJ[b,v, ]); 
    
+for(b in 1:B)
  for(v in 1:V)
   for(j in 1:J)
-   AR_VJ[v,j] = sum(Sy_VKJ[v, ,j]) / pop_VJ[v,j] ; 
+   AR_BVJ[b,v,j] = sum(Sy_BVKJ[b,v, ,j]) / pop_BVJ[b,v,j] ; 
 
 
 // VE
