@@ -2,6 +2,7 @@ rm(list = ls())
 
 library(readxl)
 library(tidyverse)
+source("BUT/R/factor_data.R")
 
 serotype_serostatus_cases = read_excel("BUT/data/raw/cases.xlsx")
 age_cases = read_excel("BUT/data/raw/cases.xlsx", sheet = 2)
@@ -79,7 +80,8 @@ SP_data = baseline_seropos %>%
   group_by(age) %>% 
   summarise(SP = sum(SP),
             N = sum(total)) %>% 
-  mutate(age = factor(age, levels = c("2-6yrs", "7-17yrs", "18-59yrs")))
+  mutate(age = factor(age, levels = c("2-6yrs", "7-17yrs", "18-59yrs"))) %>% 
+  arrange(age)
  
 saveRDS(SP_data, file = "BUT/data/processed/baseline_SP.RDS") 
 
