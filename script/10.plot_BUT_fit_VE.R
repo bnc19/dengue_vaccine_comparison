@@ -20,10 +20,15 @@ theme_set(
       legend.margin = margin(0, 0, 0, 0)
     ))
 
+# colours
+age_fill = scales::brewer_pal(palette = "Blues")(4)[2:4]
+serotype_fill = c(scales::brewer_pal(palette = "RdPu")(6)[2:5], "#CCCCCC") 
+
+
 # source files 
 file.sources = paste0("BUT/R/", list.files(path = "BUT/R/"))
 sapply(file.sources, source)
-path = "BUT/output//M4/"
+path = "BUT/output/M7/"
 
 # Data 
 VE = readRDS(paste0(path, "VE.RDS"))
@@ -63,16 +68,16 @@ AR_plot_BVK = AR_model %>%
         legend.title = element_blank(),
         legend.spacing.y = unit(0, "pt"),
         legend.margin = margin(0, 0, 0, 0)) +
-  scale_color_brewer(palette = "Set2") 
+  scale_color_manual(values = serotype_fill)
   
 
 # plot symp attack rate by age and trial arm
-
-AR_plot_VJ = AR_model %>%
-  filter(group == "AR_VJ") %>%
-  separate(name, into = c("Arm", "Age")) %>% 
-  mutate(Arm = factor(Arm, labels = c("placebo", "vaccine")),
-         Age = factor(Age, labels = c("2-6yrs", "7-17yrs", "18-59yrs"))) %>% 
+AR_plot_BVJ = AR_model %>%
+  filter(group == "AR_BVJ") %>%
+  separate(name, into = c("serostatus", "arm", "age")) %>% 
+  mutate(arm = factor(arm, labels = c("placebo", "vaccine")),
+         serostatus = factor(serostatus, labels = c("seronegative", "seropositive")),
+         age = factor(age, labels = c("2-6yrs", "7-17yrs", "18-59yrs"))) %>% 
   bind_rows(AR_age_data) %>%
   ggplot(aes(x = Arm, y = mean)) +
   geom_point(aes(shape = type, color = Age, group = interaction(type, Age)),
@@ -80,12 +85,14 @@ AR_plot_VJ = AR_model %>%
   geom_errorbar(aes(ymin = lower, ymax = upper, group = interaction(type, Age),
       linetype = type, color = Age),
     position = position_dodge(width =  0.5), width =  0.4, linewidth = 1) +
-  labs(x = " ", y = "") +
-  scale_color_brewer(palette = "Accent") +  theme_light() +
+  labs(x = " ", y = "Symptomatic \nattack rate (%)") + # DELETE Y LAB IF COMBINED AR AND VE FIGURE 
   guides(shape = "none",linetype = "none") +
   theme(legend.position =c(0.87,0.8),
         text = element_text(size = 18),
-        legend.title = element_blank()) 
+        legend.title = element_blank()) +
+  facet_wrap(~ serostatus)  + 
+  scale_color_manual(values = age_fill)
+
 
 # plot VE 
 
@@ -105,13 +112,15 @@ VE_plot =  VE_model %>%
   geom_ribbon(aes(ymin = lower, ymax = upper, fill = Serotype), alpha = 0.4) +
   labs(x = "Month", y = "Vaccine efficacy (%)") +
   scale_x_continuous(breaks = seq(0, 24,6)) +
-  facet_wrap(~Serostatus) + theme_light() + 
-  theme(legend.position = "none",
+  facet_wrap(~serostatus) + theme_light() + 
+  theme(
+        # legend.position = "none", # INCLUDE IS PLOTTING AR AND VE TOGETHER 
+        legend.position = c(0.87,0.11), 
         text = element_text(size = 18),
         legend.title = element_blank()) +
   scale_y_continuous(limits = c(0,100)) +
-  scale_color_brewer(palette = "Set2") +
-  scale_fill_brewer(palette = "Set2") 
+  scale_color_manual(values = serotype_fill) +
+  scale_fill_manual(values = serotype_fill)
 
 # combine all plots 
 g1 = (AR_plot_BVK + AR_plot_VJ )/  VE_plot + plot_annotation(tag_levels = 'a')
@@ -119,7 +128,7 @@ g1 = (AR_plot_BVK + AR_plot_VJ )/  VE_plot + plot_annotation(tag_levels = 'a')
 
 ggsave(
   plot = g1,
-  filename =  "BUT/output/figures/main_fit_ve_fig.png",
+  filename =  "BUT/output/figures/main_fit_ve_fig_B.png",
   height = 30,
   width = 40,
   units = "cm",
@@ -127,3 +136,27 @@ ggsave(
   scale = 0.8
 )
 
+# plot sep 
+
+g2 = AR_plot_BVK / AR_plot_BVJ  + plot_annotation(tag_levels = 'a')
+
+
+ggsave(
+  plot = g2,
+  filename =  "BUT/output/figures/main_fit_B.png",
+  height = 25,
+  width = 27,
+  units = "cm",
+  dpi = 600,
+  scale = 0.8
+)
+
+ggsave(
+  plot = VE_plot,
+  filename =  "BUT/output/figures/ve_B.png",
+  height = 15,
+  width = 30,
+  units = "cm",
+  dpi = 600,
+  scale = 0.8
+)
