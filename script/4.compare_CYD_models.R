@@ -7,7 +7,7 @@ library(cowplot)
 
 n_param = c(37,40,34,34,35,
             32,34,34,34,31,
-            34,34,30)
+            34,34,31)
 
 
 # read waic
@@ -58,7 +58,6 @@ colnames(d) = parameters
 # L
 d[ ,1] = "global"
 d[11:12,1] = "serotype"
-d[13,1] = NA
 
 # delta
 d[ ,2] = "serotype"
@@ -115,8 +114,9 @@ df = left_join(d, ll) %>%
 
 
 
-mycols = c("#99CC99", "#999966", "#666699", "#CC9999", 
-           "#CCCCFF", "#99CCFF", "#CCCCCC", "#FFFFFF")
+mycols = c("#A6BDDB", "#1C9099", "#6BAED6",
+           "#666699", "#FBB4B9", 
+           "#FEEBE2", "#CCCCCC", "#FFFFFF")
 
 # plot parameter dependencies 
 p1 = df %>%
@@ -183,7 +183,7 @@ g1 = cowplot::plot_grid(p2, NULL, p3, NULL,p4, NULL, p1, ncol=1,
                         axis = "tblr", align = "hv")
 
 
-ggsave(g1, file = "CYD/output/figures/model_variants.jpg",
+ggsave(g1, file = "CYD/output/figures/model_variants_C.jpg",
        height = 40, width = 50, units="cm", scale = 0.7)
 
 
