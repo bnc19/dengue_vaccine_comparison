@@ -19,6 +19,8 @@ VE = readRDS(paste0(path, "VE.RDS"))
 AR = readRDS(paste0(path, "AR.RDS"))
 VCD =  readRDS("CYD/data/processed/cases_stan_format.RDS")
 
+cols = c("#BCBDDC", "#FC9272")
+
 theme_set(
   theme_light() +
     theme(
@@ -51,22 +53,26 @@ VE_plot =  VE_model %>%
     serostatus = factor(serostatus, 
                         labels = c("seronegative", "monotypic", "multitypic"))) %>% 
   ggplot(aes(x = month , y = mean)) +
-  geom_line(aes(color = serostatus)) +
-  geom_ribbon(aes(ymin = lower, ymax = upper, fill = serostatus), alpha = 0.4) +
+  geom_line(aes(color = outcome)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper, fill = outcome), alpha = 0.4) +
   labs(x = "Month", y = "Vaccine efficacy (%)") +
   scale_x_continuous(breaks = seq(0, 60,12)) +
-  facet_grid(serotype~outcome) + theme_light() + 
-  theme(legend.position = "none",
+  facet_grid(serostatus ~ serotype, scales = "free") + theme_light() + 
+  theme(legend.position = c(0.88,0.1),
         text = element_text(size = 18),
         legend.title = element_blank()) +
-  geom_hline(yintercept=0, linetype="dashed",color = "black", linewidth=1)
-  
+  geom_hline(yintercept=0, linetype="dashed",color = "black", linewidth=1) +
+      scale_color_manual(values =  cols) +
+  scale_fill_manual(values =  cols) 
+
+
 # combine all plots 
-g1 = plot_grid(AR_plot, VE_plot, labels = c("", "c"), rel_widths = c(1.2,1))
+g1 = plot_grid(AR_plot, VE_plot, labels = c("", "e"))
+
 
 ggsave(
   plot = g1,
-  filename =  "CYD/output/figures/main_fit_ve_fig.png",
+  filename =  "CYD/output/figures/main_fit_ve_fig_C.png",
   height = 30,
   width = 55,
   units = "cm",
@@ -74,3 +80,25 @@ ggsave(
   scale = 0.9
 )
 
+# save plots sep 
+
+ggsave(
+  plot = AR_plot,
+  filename =  "CYD/output/figures/main_fit_C.png",
+  height = 30,
+  width = 35,
+  units = "cm",
+  dpi = 600,
+  scale = 0.9
+)
+
+
+ggsave(
+  plot = VE_plot,
+  filename =  "CYD/output/figures/VE_plot_C.png",
+  height = 30,
+  width = 40,
+  units = "cm",
+  dpi = 600,
+  scale = 0.9
+)
