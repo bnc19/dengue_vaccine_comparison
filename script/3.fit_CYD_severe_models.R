@@ -216,9 +216,6 @@ run_CYD_model (
   severe = T
 )
 
-
-
-
 # M10 - M6 but serotype specific tau ----------------------------------------------
 run_CYD_model (
   tau_K = 1, 
