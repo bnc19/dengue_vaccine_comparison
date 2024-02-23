@@ -237,18 +237,65 @@ run_CYD_model (
   severe = T
 )
 
-# M11 - M10 but drop epsilon  --------------------------------------------------
+# M11 - M9 but drop epsilon  --------------------------------------------------
 run_CYD_model (
   include_eps = 0,
-  tau_K = 1, 
+  L_K = 1, 
   include_beta = 2,
   psi_J = 1,
+  tau_K = 0,
   mono_lc_SN = 1,
   mono_lc_MU = 2,
   delta_KJ = 2, 
   include_pK2 = 0,
   MU_test_SN = 1,
   folder = "severe/M11",
+  n_it = n_it,
+  adapt_delta = 0.9,
+  stan_model = "CYD_model_severe.stan",
+  baseline_SP = read.csv("CYD/data/processed/baseline_SP.csv"),
+  cases =  readRDS("CYD/data/processed/cases_stan_format.RDS"),
+  mu =  read.csv("CYD/data/processed/mu.csv"),
+  severe = T
+)
+
+
+# M12 - M9 but drop beta  -----------------------------------------------------
+run_CYD_model (
+  include_beta = 0,
+  L_K = 1, 
+  include_eps = 1,
+  psi_J = 1,
+  tau_K = 0,
+  mono_lc_SN = 1,
+  mono_lc_MU = 2,
+  delta_KJ = 2, 
+  include_pK2 = 0,
+  MU_test_SN = 1,
+  folder = "severe/M12",
+  n_it = n_it,
+  adapt_delta = 0.9,
+  stan_model = "CYD_model_severe.stan",
+  baseline_SP = read.csv("CYD/data/processed/baseline_SP.csv"),
+  cases =  readRDS("CYD/data/processed/cases_stan_format.RDS"),
+  mu =  read.csv("CYD/data/processed/mu.csv"),
+  severe = T
+)
+
+
+# M13 - M9 but single beta  -----------------------------------------------------
+run_CYD_model (
+  include_beta = 1,
+  L_K = 1, 
+  include_eps = 1,
+  psi_J = 1,
+  tau_K = 0,
+  mono_lc_SN = 1,
+  mono_lc_MU = 2,
+  delta_KJ = 2, 
+  include_pK2 = 0,
+  MU_test_SN = 1,
+  folder = "severe/M13",
   n_it = n_it,
   adapt_delta = 0.9,
   stan_model = "CYD_model_severe.stan",
