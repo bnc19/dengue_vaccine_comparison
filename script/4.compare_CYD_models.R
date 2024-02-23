@@ -191,26 +191,158 @@ source_files_sev = paste0("CYD/output/severe/",
                           list.files(path = "CYD/output/severe/")[index_files_sev], "/WAIC.RDS")
 
 WAIC_sev = (lapply(source_files_sev, readRDS))
+n2 = gsub("/WAIC.RDS", "", gsub("CYD/output/severe/M", "", source_files_sev))
+names(WAIC_sev) = n2
+WAIC_sev2 = WAIC_sev[as.character(sort(as.numeric(n2)))]
 
 
 n_param_sev = c(35, 32, 33, 33, 34, 
                 35, 36, 34, 35, 39, 
-                39, 38)
+                39, 38, 37)
 # compare WAIC
-comp_WAIC_sev = loo::loo_compare(WAIC_sev) # models start from M0 so subtract 1 from best fitting 
+comp_WAIC_sev = loo::loo_compare(WAIC_sev2) # models start from M0 so subtract 1 from best fitting 
 
 
 waic_df_sev = comp_WAIC_sev %>%  
   as.data.frame() %>% 
-  select(elpd_diff, waic) %>% 
-  mutate(model = 1:7)
+  rownames_to_column(var = "model") %>% 
+  select(model, elpd_diff, waic) %>% 
+  mutate(model = as.numeric(model) + 1) # add 1 so on the same scale as other models 
+
+
 ll_source_sev = paste0("CYD/output/severe/", 
                        list.files(path = "CYD/output/severe/")[index_files_sev], "/posterior.csv")
+
 post_sev = bind_rows(lapply(ll_source_sev, read.csv))
+
 ll_sev = post_sev %>%  
   filter(variable == "ll") %>% 
-  mutate(model = 1:7) %>% 
+  mutate(model = as.numeric(n2) +1) %>% 
   select(mean, q5, q95, model) %>% 
   arrange(model) %>% 
   mutate(param = n_param_sev) %>% 
   left_join(waic_df_sev)
+
+# models 
+models_sev = as.numeric(paste0(1:length(n_param_sev)))
+parameters_sev = c("L", "tau",  "beta", "epsilon", "psi")
+
+# create empty matrix 
+m_sev = matrix(nrow = length(models_sev), ncol = length(parameters_sev))
+
+# format 
+d_sev = m_sev %>%
+  as.data.frame() 
+
+rownames(d_sev) = models_sev
+colnames(d_sev) = parameters_sev
+
+# L
+d_sev[ ,1] = "global"
+d_sev[c(1,10,12,13), 1] = "serotype"
+
+# tau
+d_sev[11,2] = "serotype"
+
+# beta
+d_sev[c(3,6,8) ,3] = "age"
+d_sev[c(7,9,10,11,12) ,3] = "age & outcome"
+
+# epsilon
+d_sev[c(5,6,7,10,11,13) ,4] = "global"
+
+# psi 
+d_sev[ ,5] = "global"
+d_sev[4:13 ,5] = "age"
+
+
+# add log lik to dependency matrix 
+d_sev$model = models_sev
+
+# format data ready to plot 
+df_sev = left_join(d_sev, ll_sev) %>%
+  pivot_longer(cols = L:psi,
+               names_to = "Parameter",
+               values_to = "depends") %>%
+  mutate(depends = ifelse(is.na(depends), "not included", depends)) %>%
+  mutate(
+    depends = factor(
+      depends,
+      levels = c(
+        "age",
+        "serotype",
+        "age & outcome",
+        "global",
+        "not included"
+      ) )) %>%
+  mutate(color = ifelse(model == 10, "red", "black"))
+
+mycols_sev = c("#A6BDDB", "#1C9099", "#FBB4B9", 
+           "#CCCCCC", "#FFFFFF")
+
+# plot parameter dependencies 
+p1_sev = df_sev %>%
+  ggplot(aes(x = model, y = Parameter)) +
+  geom_tile(aes(fill = depends), color = "black", alpha =0.6) +
+  theme_classic() +
+  theme(legend.title = element_blank(),
+        legend.position = "bottom",
+        plot.margin = margin(t = 0, r = 0, b = 0, l = 0)) +
+  scale_x_continuous(limits = c(0.5,13.5),breaks = 1:13) +
+  scale_fill_manual(values=mycols_sev) +
+  scale_y_discrete(labels = c('psi' = expression(psi),
+                              'tau'   = expression(tau),
+                              "beta" = expression(beta))) +
+  ylab("Model")
+
+
+# plot log -likelihood 
+p2_sev = df_sev %>% 
+  ggplot(aes(x = model-0.5, y = mean)) +
+  geom_point(aes(color=color, size = color)) + geom_line() +
+  geom_ribbon(aes(ymin = q5, ymax = q95), alpha =0.2) + 
+  scale_x_continuous(limits = c(0,13), breaks = 1:13) + ylab("Log-likelihood") +
+  xlab(" ")  + theme_bw() +
+  scale_color_manual(values=c("#000000", "#CC0033"))+
+  scale_size_manual(values=c(1,2.5)) +
+  theme(axis.title.x = element_blank(),legend.position = "none",
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.margin = margin(t = 0, r = 0, b = 0, l = 0)) 
+
+# plot number of parameters 
+p3_sev = df_sev %>% 
+  ggplot(aes(x = model-0.5, y = param)) + # - 0.5 so aligns with other plots 
+  geom_point(aes(color=color, size = color)) + geom_line() +
+  theme_bw() + ylab("Number of parameters") +
+  scale_color_manual(values=c("#000000", "#CC0033"))+
+  scale_size_manual(values=c(1,2.5)) +
+  scale_x_continuous(limits = c(0,13), breaks = 1:13) +
+  scale_y_continuous(limits = c(30,40), breaks = seq(30,40,by=2)) +
+  theme(axis.title.x = element_blank(),legend.position = "none",
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.margin = margin(t = 0, r = 0, b = 0, l = 0)) 
+
+
+# plot ELPD difference  
+p4_sev = df_sev %>% 
+  ggplot(aes(x = model-0.5, y = elpd_diff)) + # - 0.5 so aligns with other plots 
+  geom_point(aes(color=color, size = color)) + geom_line() +
+  theme_bw() + ylab("Difference in ELPD \ncompared to model 11") +
+  scale_color_manual(values=c("#000000", "#CC0033"))+
+  scale_size_manual(values=c(1,2.5)) +
+  scale_x_continuous(limits = c(0,13), breaks = 1:13) +
+  theme(axis.title.x = element_blank(),legend.position = "none",
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.margin = margin(t = 0, r = 0, b = 0, l = 0)) 
+
+g1_sev = cowplot::plot_grid(p2_sev, NULL, p3_sev, NULL,p4_sev, NULL, p1_sev, ncol=1, 
+                        rel_heights = c(1,-0.3,1,-0.3,1,-0.3, 1.8), 
+                        axis = "tblr", align = "hv")
+
+
+ggsave(g1_sev, file = "CYD/output/figures/severe_model_variants_C.jpg",
+       height = 40, width = 50, units="cm", scale = 0.7)
+
