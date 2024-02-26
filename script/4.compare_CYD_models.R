@@ -54,7 +54,7 @@ rownames(d) = models
 colnames(d) = parameters
 
 # L
-d[ ,1] = "global"
+d[ ,1] = "serostatus & serotype"
 d[11:12,1] = "serotype"
 
 # delta
@@ -198,10 +198,11 @@ WAIC_sev2 = WAIC_sev[as.character(sort(as.numeric(n2)))]
 
 n_param_sev = c(35, 32, 33, 33, 34, 
                 35, 36, 34, 35, 39, 
-                39, 38, 37)
+                39, 38, 37, 38, 38,
+                38)
 # compare WAIC
-comp_WAIC_sev = loo::loo_compare(WAIC_sev2) # models start from M0 so subtract 1 from best fitting 
-
+comp_WAIC_sev = loo::loo_compare(WAIC_sev2) # models start from M0 
+# M9 is the best fitting model
 
 waic_df_sev = comp_WAIC_sev %>%  
   as.data.frame() %>% 
@@ -225,7 +226,7 @@ ll_sev = post_sev %>%
 
 # models 
 models_sev = as.numeric(paste0(1:length(n_param_sev)))
-parameters_sev = c("L", "tau",  "beta", "epsilon", "psi")
+parameters_sev = c("L", "tau",  "beta", "epsilon", "psi", "delta")
 
 # create empty matrix 
 m_sev = matrix(nrow = length(models_sev), ncol = length(parameters_sev))
@@ -237,31 +238,37 @@ d_sev = m_sev %>%
 rownames(d_sev) = models_sev
 colnames(d_sev) = parameters_sev
 
+# TO DO: CHECK VARIANT FIGURE AGAINST MODEL RUNS
+
 # L
 d_sev[ ,1] = "global"
-d_sev[c(1,10,12,13), 1] = "serotype"
+d_sev[c(1,10,12:16), 1] = "serotype"
 
 # tau
 d_sev[11,2] = "serotype"
 
 # beta
-d_sev[c(3,6,8) ,3] = "age"
-d_sev[c(7,9,10,11,12) ,3] = "age & outcome"
+d_sev[c(3,6,8,14) ,3] = "age"
+d_sev[c(7,9,10,11,12,15,16) ,3] = "age & outcome"
 
 # epsilon
-d_sev[c(5,6,7,10,11,13) ,4] = "global"
+d_sev[c(5,6,7,10,11,13:16) ,4] = "global"
 
 # psi 
 d_sev[ ,5] = "global"
-d_sev[4:13 ,5] = "age"
+d_sev[c(4:14,16) ,5] = "age"
 
+
+# delta
+d_sev[ ,6] = "age"
+d_sev[16 ,6] = "global"
 
 # add log lik to dependency matrix 
 d_sev$model = models_sev
 
 # format data ready to plot 
 df_sev = left_join(d_sev, ll_sev) %>%
-  pivot_longer(cols = L:psi,
+  pivot_longer(cols = L:delta,
                names_to = "Parameter",
                values_to = "depends") %>%
   mutate(depends = ifelse(is.na(depends), "not included", depends)) %>%
@@ -288,11 +295,13 @@ p1_sev = df_sev %>%
   theme(legend.title = element_blank(),
         legend.position = "bottom",
         plot.margin = margin(t = 0, r = 0, b = 0, l = 0)) +
-  scale_x_continuous(limits = c(0.5,13.5),breaks = 1:13) +
+  scale_x_continuous(limits = c(0.5,16.5),breaks = 1:16) +
   scale_fill_manual(values=mycols_sev) +
   scale_y_discrete(labels = c('psi' = expression(psi),
                               'tau'   = expression(tau),
-                              "beta" = expression(beta))) +
+                              "beta" = expression(beta),
+                              "epsilon" = expression(epsilon),
+                              "delta" = expression(delta))) +
   ylab("Model")
 
 
@@ -301,7 +310,7 @@ p2_sev = df_sev %>%
   ggplot(aes(x = model-0.5, y = mean)) +
   geom_point(aes(color=color, size = color)) + geom_line() +
   geom_ribbon(aes(ymin = q5, ymax = q95), alpha =0.2) + 
-  scale_x_continuous(limits = c(0,13), breaks = 1:13) + ylab("Log-likelihood") +
+  scale_x_continuous(limits = c(0,16), breaks = 1:16) + ylab("Log-likelihood") +
   xlab(" ")  + theme_bw() +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
@@ -317,7 +326,7 @@ p3_sev = df_sev %>%
   theme_bw() + ylab("Number of parameters") +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
-  scale_x_continuous(limits = c(0,13), breaks = 1:13) +
+  scale_x_continuous(limits = c(0,16), breaks = 1:16) +
   scale_y_continuous(limits = c(30,40), breaks = seq(30,40,by=2)) +
   theme(axis.title.x = element_blank(),legend.position = "none",
         axis.text.x = element_blank(),
@@ -332,7 +341,7 @@ p4_sev = df_sev %>%
   theme_bw() + ylab("Difference in ELPD \ncompared to model 11") +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
-  scale_x_continuous(limits = c(0,13), breaks = 1:13) +
+  scale_x_continuous(limits = c(0,16), breaks = 1:16) +
   theme(axis.title.x = element_blank(),legend.position = "none",
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
