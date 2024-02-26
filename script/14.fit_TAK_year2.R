@@ -3,6 +3,26 @@
 # the the fit and plot VE against Butantan-DV VE. 
 rm(list=ls())
 
+# set up -----------------------------------------------------------------------
+library(dplyr)
+library(tidyr)
+library(Hmisc)
+library(ggplot2)  
+library(cmdstanr)
+library(posterior)
+library(bayesplot)
+library(loo)
+options(mc.cores = parallel::detectCores())
+
+# source functions
+file.sources = paste0("TAK/R/", list.files(path = "TAK/R/"))
+sapply(file.sources, source)
+
+folder = "M2_year2"
+file_path = (paste0("TAK/output/", folder))
+dir.create(file_path)
+
+# parameters 
 VCD_years = c(12, 18, 24) / 12
 time =1:24
 mono_lc_MU = 2
@@ -12,7 +32,6 @@ include_beta = 3
 mono_lc_SN = 1
 tau_K = 1
 MU_test_SN = 1
-folder = "M2_year2"
 n_it = 10000
 n_chains = 4
 adapt_delta = 0.77
@@ -21,6 +40,7 @@ baseline_SP = read.csv("TAK/data/raw/seropositive_by_age_baseline.csv")
 VCD =  read.csv("TAK/data/processed/vcd_data.csv")
 hosp = read.csv("TAK/data/processed/hosp_data.csv") 
 mu =  array(read.csv("TAK/data/processed/n0_new.csv")$mean, dim = c(2, 4))
+cases =  readRDS("TAK/data/processed/case_data.RDS")
 
 init_values = function(){
   list(
@@ -63,24 +83,6 @@ lower_bound_L = 0
 MU_test_SN = 1
 MU_symp = 1
 enhancement = 0
-
-# set up -----------------------------------------------------------------------
-library(dplyr)
-library(tidyr)
-library(ggplot2)  
-library(cmdstanr)
-library(posterior)
-library(bayesplot)
-library(loo)
-options(mc.cores = parallel::detectCores())
-
-# source functions
-file.sources = paste0("TAK/R/", list.files(path = "TAK/R/"))
-sapply(file.sources, source)
-
-comp_model = cmdstan_model(paste0("TAK/models/", stan_model),stanc_options = list("O1"))
-file_path = (paste0("TAK/output/", folder))
-dir.create(file_path)
 
 # data -----------------------------------------------------------------------
 hosp_f = factor_TAK_VCD(hosp)
@@ -217,7 +219,10 @@ stan_data = list(
     VCD_KJ2 = VCD_KJ2_m
   )
 
-# fit model ------------------------------------------------------------------
+# fit model --------------------------------------------------------------------
+comp_model = cmdstan_model(paste0("TAK/models/", stan_model),stanc_options = list("O1"))
+
+
 start = Sys.time()
 stan_fit = comp_model$sample(
   data = stan_data,
@@ -259,20 +264,31 @@ saveRDS(n_out, paste0(file_path, "/n.RDS"))
 # plot fit ---------------------------------------------------------------------
 # add aggregated populations to data and calculate attack rates
 # summarise over iterations 
+
 VE_model = extract_TAK_model_results(VE_out)  
 AR_model = extract_TAK_model_results(AR_out)  
 
 # calculate attack rates from data 
-AR_data = calc_TAK_attack_rates(VCD2)
-HR_data = calc_TAK_hosp_rates(VCD=VCD2, hosp = HOSP2)
-data= bind_rows(AR_data, HR_data)
+# Calculate data attack rates 
+calc_AR = function(data){
+  data %>%  
+    mutate(mean =  binconf(Y,N, method = "exact")[,1] * 100,  
+           lower = binconf(Y,N, method = "exact")[,2] * 100, 
+           upper = binconf(Y,N, method = "exact")[,3] * 100) %>%  
+    mutate(type = "data")
+}
+
+cases_AR = lapply(cases, calc_AR)
+
+data = cases_AR %>%  bind_rows() %>% 
+  filter(month <= 24) %>% 
+  mutate(trial = factor(trial, labels = c("placebo", "vaccine", "both")))
+
 
 # colours 
-age_fill_VE = scales::brewer_pal(palette = "Blues")(4)[c(2,4)]
-age_fill_AR = scales::brewer_pal(palette = "Blues")(4)[2:4]
+age_fill = scales::brewer_pal(palette = "Blues")(4)[2:4]
 serotype_fill = scales::brewer_pal(palette = "RdPu")(6)[2:5] 
 trial_fill = scales::brewer_pal(palette = "PuBuGn")(3)[2:3]
-
 
 theme_set(
   theme_light() +
@@ -283,7 +299,6 @@ theme_set(
       legend.position = c(0.9,0.75), 
       legend.title = element_blank()
     ))
-
 
 # plot VE 
 VE_plot =  VE_model %>%
@@ -303,149 +318,31 @@ VE_plot =  VE_model %>%
   geom_hline(yintercept=0, linetype="dashed",color = "black", linewidth=1) +
   facet_grid(serostatus+outcome ~ serotype, scale= "free" ) +
   theme(legend.position = c(0.07,0.07)) +
-  scale_color_manual(values = age_fill_VE)+
-  scale_fill_manual(values = age_fill_VE)
+  scale_color_manual(values = age_fill)+
+  scale_fill_manual(values = age_fill)
 
-
-# Plot AR  across time 
-AR_VRD = data %>%
-  filter(serostatus == "both",
-         age == "all",
-         trial != "both",
-         serotype == "all") %>%
-  mutate(trial = ifelse(trial == "TAK-003", "vaccine", trial)) %>%
-  select(-serotype,-age,-serostatus,-X, -year) %>%
-  mutate(outcome = factor(
-    outcome,
-    levels = c("VCD", "hosp"),
-    labels = c("symptomatic", "hospitalised")
-  ))
-
-time_plot =  AR_model %>%
-  filter(group == "AR_VRD") %>%
-  separate(name, into = c("trial", "outcome", "month")) %>%
-  mutate(
-    trial = factor(trial, labels = c("placebo", "vaccine")),
-    month = ifelse(month == 1, 12,
-                   ifelse(
-                     month == 2, 18,
-                     ifelse(month == 3, 24,
-                            ifelse(month == 4, 36,
-                                   ifelse(month == 5, 48, 54))))),
-    outcome = factor(outcome, labels = c("symptomatic", "hospitalised"))) %>%
-  bind_rows(AR_VRD) %>%
-  mutate(month = as.numeric(month)) %>%
+# Plot attack rates by age
+AR_plot_BVJRD = AR_model %>%
+  filter(group == "AR_BVJRD") %>%
+  separate(name, into = c("serostatus", "trial", "age", "outcome", "time")) %>% 
+  mutate(serostatus = factor(serostatus, labels = c("seronegative", "seropositive")),
+         trial = factor(trial, labels =c("placebo", "vaccine")),
+         outcome = factor(outcome, labels = c("symp", "hosp")),
+         age = factor(age, labels = c("4-5yrs", "6-11yrs", "12-16yrs"), levels = c(1,2,3))) %>% 
+  mutate(month = ifelse(time == 1, 12, ifelse(time == 2, 18, 24))) %>%
+  bind_rows(filter(data, age!="all", serotype =="all")) %>%
   ggplot(aes(x = month, y = mean)) +
-  geom_point(aes(color = trial, shape = type), position = position_dodge(width = 5), size = 3) +
-  geom_errorbar( aes(ymin = lower ,ymax = upper ,color = trial, linetype = type),
-                 position = position_dodge(width = 5),width =  0.4,linewidth =1) +
-  labs(x = "month", y = "Attack rate (%)") +
-  scale_x_continuous(breaks = c(12,18,24,36,48,54)) +
-  scale_color_manual(values = trial_fill) +
-  facet_wrap(~ outcome, ncol = 2) # CHANGE TO 1 IF PLOTTING AR AND VE TOGETHER 
+  geom_point(aes(  shape = type, color = age,  group = interaction(type, age)),
+    position = position_dodge(width = 2.5), size = 3) +
+  geom_errorbar(aes(ymin = lower, ymax = upper, group = interaction(type, age), linetype = type, color = age),
+    position = position_dodge(width =  2.5), width =  0.4, linewidth = 1) +
+  facet_grid(outcome+serostatus ~ trial, scales = "free") +
+  labs(x = "Month", y = "Attack rate (%)") +
+  theme(legend.position = c(0.9,0.9)) +
+  scale_x_continuous(breaks = c(12,18,24,36)) +
+  scale_colour_manual(values = age_fill) 
 
 
-# Plot AR by age and trial and serostatus 
-
-AR_BVJR = data %>%
-  filter(serotype == "all" |
-           age != "all", serostatus != "both", month == 1000) %>%
-  mutate(trial = ifelse(trial == "TAK-003", "vaccine", trial)) %>%
-  select(-month,-X, -year,-serotype) %>%
-  mutate(outcome = factor(
-    outcome,
-    levels = c("VCD", "hosp"),
-    labels = c("symptomatic", "hospitalised")
-  ))
-
-age_plot =  AR_model %>%
-  filter(group == "AR_BVJR") %>%
-  separate(name, into = c("serostatus", "trial", "age", "outcome")) %>% 
-  mutate(outcome = factor(outcome,labels = c("symptomatic", "hospitalised"))) %>% 
-  mutate(serostatus = factor(serostatus, labels=c("seronegative", "seropositive")),
-         trial = factor(trial, labels=c("placebo", "vaccine")),
-         age = factor(age, labels = c("4-5yrs", "6-11yrs", "12-16yrs"),
-                      levels = c(1,2,3))) %>% 
-  bind_rows(AR_BVJR) %>%
-  unite(c(trial, serostatus), col = "x") %>%
-  ggplot(aes(x = x, y = mean)) +
-  geom_point(
-    aes( shape = type,  color = age, group = interaction(type, age)),
-    position = position_dodge(width = 0.5), size = 3 ) +
-  geom_errorbar(
-    aes(ymin = lower, ymax = upper, group = interaction(type, age),
-        linetype = type,color = age),
-    position = position_dodge(width =  0.5),
-    width =  0.4,
-    linewidth = 1
-  ) +
-  # labs(x = " ", y ="" ) +  # CHANGE IF PLOTTING AR AND VE TOGETHER 
-  labs(x = " ", y = "Attack rate (%)") +
-  scale_color_manual(values = age_fill_AR) +
-  scale_x_discrete(
-    labels  = c(
-      "placebo \nseronegative",
-      "placebo \nseropositive",
-      "vaccine \nseronegative",
-      "vaccine \nseropositive"
-    )) +
-  guides(shape = "none",
-         linetype = "none")+
-  facet_wrap(~ outcome, ncol=2) # CHANGE TO 1 IF PLOTTING AR AND VE TOGETHER 
-
-
-# Plot AR by serotype and trial and serostatus 
-
-AR_BVKR = data %>%
-  filter(serotype != "all" |
-           age == "all", serostatus != "both", month == 1000) %>%
-  mutate(trial = ifelse(trial == "TAK-003", "vaccine", trial)) %>%
-  select(-month,-X, -year,-age) %>%
-  mutate(outcome = factor(
-    outcome,
-    levels = c("VCD", "hosp"),
-    labels = c("symptomatic", "hospitalised")
-  )) %>%
-  mutate(serotype = factor(serotype, labels = c("DENV1", "DENV2", "DENV3", "DENV4")))
-
-
-serotype_plot = AR_model %>%
-  filter(group == "AR_BVKR") %>%
-  separate(name, into = c("serostatus", "trial", "serotype", "outcome")) %>%
-  mutate(outcome = factor(outcome, labels = c("symptomatic", "hospitalised"))) %>%
-  mutate(
-    serostatus = factor(serostatus, labels = c("seronegative", "seropositive")),
-    trial = factor(trial, labels = c("placebo", "vaccine")),
-    serotype = factor(serotype, labels = c("DENV1", "DENV2", "DENV3", "DENV4"))) %>%
-  bind_rows(AR_BVKR) %>% 
-  unite(c(trial, serostatus), col = "x") %>%
-  ggplot(aes(x = x, y = mean)) +
-  geom_point(aes(shape = type, color = serotype, group = interaction(type, serotype)),
-             position = position_dodge(width = 0.7), size = 3) +
-  geom_errorbar(
-    aes(
-      ymin = lower ,
-      ymax = upper ,
-      group = interaction(type, serotype),
-      linetype = type,
-      color = serotype
-    ),
-    position = position_dodge(width =  0.7),
-    width =  0.4,
-    linewidth = 1
-  ) +
-  # labs(x = "month", y = "Attack rate (%)") + # CHANGE IF PLOTTING AR AND VE TOGETHER 
-  labs(x = " ", y = "Attack rate (%)") +
-  scale_color_manual(values = serotype_fill) +
-  scale_x_discrete(
-    labels  = c(
-      "placebo \nseronegative",
-      "placebo \nseropositive",
-      "vaccine \nseronegative",
-      "vaccine \nseropositive")) +
-  guides(shape = "none",
-         linetype = "none")+
-  facet_wrap(~ outcome, ncol=2) # CHANGE TO 1 IF PLOTTING AR AND VE TOGETHER 
 
 # combine all plots 
 g1 = cowplot::plot_grid(time_plot, age_plot, 
