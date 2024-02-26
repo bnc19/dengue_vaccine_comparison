@@ -305,3 +305,48 @@ run_CYD_model (
   severe = T
 )
 
+
+# M14 - M9 but drop psi_j  ----------------------------------------------
+run_CYD_model (
+  psi_J = 0,
+    L_K = 1, 
+  include_beta = 2,
+  include_eps = 1,
+  tau_K = 0,
+  mono_lc_SN = 1,
+  mono_lc_MU = 2,
+  delta_KJ = 2, 
+  include_pK2 = 0,
+  MU_test_SN = 1,
+  folder = "severe/M14",
+  n_it = n_it,
+  adapt_delta = 0.94,
+  stan_model = "CYD_model_severe.stan",
+  baseline_SP = read.csv("CYD/data/processed/baseline_SP.csv"),
+  cases =  readRDS("CYD/data/processed/cases_stan_format.RDS"),
+  mu =  read.csv("CYD/data/processed/mu.csv"),
+  severe = T
+)
+
+
+# M15 - M9 but single delta ----------------------------------------------------
+run_CYD_model (
+  delta_KJ = 0, 
+  L_K = 1, 
+  include_beta = 2,
+  include_eps = 1,
+  psi_J = 1,
+  tau_K = 0,
+  mono_lc_SN = 1,
+  mono_lc_MU = 2,
+  include_pK2 = 0,
+  MU_test_SN = 1,
+  folder = "severe/M15",
+  n_it = n_it,
+  adapt_delta = 0.9,
+  stan_model = "CYD_model_severe.stan",
+  baseline_SP = read.csv("CYD/data/processed/baseline_SP.csv"),
+  cases =  readRDS("CYD/data/processed/cases_stan_format.RDS"),
+  mu =  read.csv("CYD/data/processed/mu.csv"),
+  severe = T
+)
