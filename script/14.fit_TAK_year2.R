@@ -90,7 +90,6 @@ HOSP2 = filter(hosp_f, month <= 24)
 T = length(time)
 D = length(VCD_years)
 
-  
 # calculate # VCD over time
 VCD_D = VCD2 %>%
     filter(serostatus == "both",
@@ -102,7 +101,6 @@ VCD_D = VCD2 %>%
     select(Y)
   
 # calculate # hosp over time
-
 hosp_D = HOSP2 %>%
   filter(age != "all", trial != "both") %>%
   group_by(year) %>%
@@ -124,7 +122,7 @@ N_hosp_BVK = HOSP2 %>%
     filter(serotype != "all", trial != "both") %>%
     arrange(year, serostatus, trial , serotype)
   
-hosp_BVK_m = array(N_hosp_BVK$Y, dim = c(B * K * V))  # (D=4)
+hosp_BVK_m = array(N_hosp_BVK$Y, dim = c(B * K * V))  
   
 # calculate # VCD by serostatus + trial arm + serotype, over time
 # for multinomial likelihood
@@ -160,10 +158,10 @@ N_VCD_BVJA_m = VCD2 %>%
            trial != "both") %>%
     arrange(year, serostatus, trial , age)
   
-  VCD_BVJA_m = array(N_VCD_BVJA_m$Y, dim = c(B * V * J, D))
+VCD_BVJA_m = array(N_VCD_BVJA_m$Y, dim = c(B * V * J, D))
   
 # VCD age and serotype year and 2
-  N_VCD_KJ2_m = VCD2 %>%
+N_VCD_KJ2_m = VCD2 %>%
     filter(age != "all", serotype != "all") %>%
     arrange(year, serotype, age)
   
@@ -178,7 +176,7 @@ hosp_KJ2_m = array(N_hosp_KJ2_m$Y, dim = c(K * J, 2))
 
 # data
   
-  stan_data = list(
+stan_data = list(
     time = time,
     T = T,
     J = J,
