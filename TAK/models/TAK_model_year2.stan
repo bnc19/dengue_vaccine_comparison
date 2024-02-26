@@ -733,8 +733,10 @@ generated quantities{
   real<lower = 0 > AR_BVKH[B,V,K] ;
   real<lower = 0 > AR_KJRD[K,J,R,2];
 
+
   // VE
-  real<upper =1 > VE[C,K,J,R,T]   ;
+  real<upper =1 > VE[C,K,J,R,T] ;
+  real<upper =1 > VE_K[C,K,R,T] ;
   
  {
 
@@ -772,7 +774,7 @@ for(b in 1:B)
 for(b in 1:B)
  for(v in 1:V)
   for(k in 1:K){
-    AR_BVKH[b,v,k] = sum(C_BVKJR[b,v, ,k,2]) / sum(pop[b,v, ,3]); // sum over age and pick hosp 
+    AR_BVKH[b,v,k] = sum(C_BVKJR[b,v,k, ,2]) / sum(pop[b,v, ,3]); // sum over age and pick hosp 
     }
     
 // VE
@@ -786,6 +788,14 @@ for(c in 1:C)
   for(j in 1:J)
     for(t in 1:T) VE[c,k,j,2,t] = 1 - RR_hosp[c,2,k,j,t] ; 
 
+
+for(c in 1:C)
+ for(k in 1:K)
+  for(r in 1:R)
+    for(t in 1:T) VE_K[c,k,r,t] = mean(VE[c,k, ,r,t] );
+
 }
+
+
 
 }
