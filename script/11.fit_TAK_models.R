@@ -82,3 +82,5 @@ run_TAK_model (
   hosp = read.csv("TAK/data/processed/hosp_data.csv") ,
   mu =  array(read.csv("TAK/data/processed/n0_new.csv")$mean, dim = c(2, 4))
 )
+
+
