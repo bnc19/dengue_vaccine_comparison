@@ -36,7 +36,7 @@ AR_model = extract_TAK_model_results(AR)
 # calculate attack rates from data 
 AR_data = calc_TAK_attack_rates(VCD)
 HR_data = calc_TAK_hosp_rates(VCD=VCD, hosp = hosp)
-data= bind_rows(AR_data, HR_data)
+data = bind_rows(AR_data, HR_data)
 
 theme_set(
   theme_light() +
