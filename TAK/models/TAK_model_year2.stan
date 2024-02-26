@@ -51,28 +51,30 @@ transformed data {
   array[D] int pop_D;
 
 // POPULATION AGGREGATION 
-for(b in 1:B)
- for(j in 1:J){
+
+// get year 1 and 2 pop not by B or J for KJ AR 
+for(b in 1:B) 
+ for(j in 1:J){ // sum over V and select 12 and 24 months 
  pop_BJD[b,j,1] = sum(pop[b, ,j,1]);
  pop_BJD[b,j,2] = sum(pop[b, ,j,3]);
  }
  
 for(j in 1:J)
  for(d in 1:2)
- pop_JD[j,d] = sum(pop_BJD[ ,j,d]); 
+ pop_JD[j,d] = sum(pop_BJD[ ,j,d]);  // sum over serostatus 
  
-// get pop just by D 
+// get pop just by D for binomial likelihood 
+
  for(v in 1:V)
   for(j in 1:J)
-   for(d in 1:D)
+   for(d in 1:D) // sum over B 
    pop_VJD[v,j,d] = sum(pop[ ,v,j,d]) ;
    
-
   for(v in 1:V)
-   for(d in 1:D)
-   pop_VD[v,d] = sum(pop_VJD[ ,v,d]) ;
+   for(d in 1:D) // sum over J 
+   pop_VD[v,d] = sum(pop_VJD[v, ,d]) ;
    
-for(d in 1:D)
+for(d in 1:D) // sum over V 
    pop_D[d] = sum(pop_VD[ ,d]) ;
  
 }
@@ -563,7 +565,7 @@ for(j in 1:J)
       for(k in 1:K)
         for(d in 1:D){
           C_BVKJRD[b,v,k,j,1,d] = Di[b,v,k,j,d] * sum(pop[ ,v,j,d]); // VCD up to month 24
-          C_BVKJRD[b,v,k,j,2,d] = H[b,v,k,j,d] * sum(pop[ ,v,j,d]); // Hosp up to month 24
+          C_BVKJRD[b,v,k,j,2,d] = H[b,v,k,j,d]  * sum(pop[ ,v,j,d]); // Hosp up to month 24
           }
           
 // aggregate 1:24 months for hosp
@@ -572,29 +574,30 @@ for(j in 1:J)
   for(v in 1:V) 
    for(b in 1:B) 
     for(r in 1:R)
-      C_BVKJR[b,v,k,j,r] = sum(C_BVKJRD[b,v,k,j,r,1:3]) ;  
+      C_BVKJR[b,v,k,j,r] = sum(C_BVKJRD[b,v,k,j,r, ]) ;  
 
+// aggregate up to get total cases 
 for(v in 1:V)
  for(k in 1:K) 
   for(j in 1:J) 
    for(r in 1:R)  
-    for(d in 1:D)  
+    for(d in 1:D)   // sum over B 
     C_VKJRD[v,k,j,r,d] = sum(C_BVKJRD[ ,v,k,j,r,d]); 
     
 for(k in 1:K) 
   for(j in 1:J) 
    for(r in 1:R)  
-    for(d in 1:D)   
+    for(d in 1:D) // sum over V 
      C_KJRD[k,j,r,d] = sum(C_VKJRD[ ,k,j,r,d]) ; 
 
 for(j in 1:J)     
  for(r in 1:R)
-  for(d in 1:D)
+  for(d in 1:D) // sum over K 
     C_JRD[j,r,d] = sum(C_KJRD[ ,j,r,d]);
 
 
 for(r in 1:R)
- for(d in 1:D)
+ for(d in 1:D) // sum over J 
   C_RD[r,d] = sum(C_JRD[ ,r,d]) ; 
 
 for(b in 1:B)
@@ -628,6 +631,7 @@ for(j in 1:J)
    pD_KJ2[j+3,d] = pC_KJR2[2,j,1,d];
    pD_KJ2[j+6,d] = pC_KJR2[3,j,1,d];
    pD_KJ2[j+9,d] = pC_KJR2[4,j,1,d];
+   
    pH_KJ2[j,d]   = pC_KJR2[1,j,2,d];
    pH_KJ2[j+3,d] = pC_KJR2[2,j,2,d];
    pH_KJ2[j+6,d] = pC_KJR2[3,j,2,d];
@@ -656,6 +660,7 @@ for(j in 1:J)
    pD_BVJD[j+3,d]   =  pC_BVJRD[1,2,j,1,d];
    pD_BVJD[j+6,d]   =  pC_BVJRD[2,1,j,1,d];
    pD_BVJD[j+9,d]   =  pC_BVJRD[2,2,j,1,d];
+   
    pH_BVJD[j,d]     =  pC_BVJRD[1,1,j,2,d];
    pH_BVJD[j+3,d]   =  pC_BVJRD[1,2,j,2,d];
    pH_BVJD[j+6,d]   =  pC_BVJRD[2,1,j,2,d];
@@ -674,12 +679,10 @@ for(d in 1:D)
  ll += binomial_lpmf(HOSP_D| pop_D, pC_RD[2,]);
 
 
-   ll +=  multinomial_lpmf(VCD_BVKD[ ,1] | pD_BVKD[ ,1]);
-  for(d in 2:D)   ll += multinomial_lpmf(VCD_BVKD[ ,d] | pD_BVKD[ ,d]);
-
-
+ for(d in 1:D)    ll +=  multinomial_lpmf(VCD_BVKD[ ,d] | pD_BVKD[ ,d]);
  for(d in 1:D)    ll += multinomial_lpmf(VCD_BVJD[ ,d]  | pD_BVJD[ ,d]) ;
  for(d in 1:2)    ll += multinomial_lpmf(VCD_KJ2[  ,d]  | pD_KJ2[ ,d]) ;
+ 
  ll += multinomial_lpmf(HOSP_BVK | pH_BVK);
  for(d in 1:D)    ll += multinomial_lpmf(HOSP_BVJD[ ,d] | pH_BVJD[ ,d]) ;
  for(d in 1:2)    ll += multinomial_lpmf(HOSP_KJ2[ ,d]  | pH_KJ2[ ,d]) ;
@@ -761,8 +764,6 @@ for(b in 1:B)
    for(r in 1:R)
     for(d in 1:D)
      AR_BVKRD[b,v,k,r,d] = sum(C_BVKJRD[b,v,k, ,r,d]) / sum(pop[b,v, ,d]);
-
-
   
   for(k in 1:K)
    for(j in 1:J)
