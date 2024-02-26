@@ -1,4 +1,7 @@
-# M2 year 2  - M2 but only fit to the first 2 years of symptomatic data to match Butantan-DV 
+# Script to fit M2 TAK but only to two years of symptomatic and hospitalised data
+# to match Butantan-DV. Don't include enhancement in the model. Also plot 
+# the the fit and plot VE against Butantan-DV VE. 
+rm(list=ls())
 
 VCD_years = c(12, 18, 24) / 12
 time =1:24
@@ -59,7 +62,7 @@ L_mean =0
 lower_bound_L = 0
 MU_test_SN = 1
 MU_symp = 1
-enhancement = 1
+enhancement = 0
 
 # set up -----------------------------------------------------------------------
 library(dplyr)
@@ -126,7 +129,6 @@ hosp_BVK_m = array(N_hosp_BVK$Y, dim = c(B * K * V))
   
 # calculate # VCD by serostatus + trial arm + serotype, over time
 # for multinomial likelihood
-
 N_VCD_BVKD_m = VCD2 %>%
     group_by(serostatus, trial, age, serotype, year) %>%
     summarise(Y = sum(Y)) %>%
@@ -148,7 +150,6 @@ hosp_BVJA_m = array(N_hosp_BVJA_m$Y, dim = c(B * V * J, D))
   
 # calculate # VCD by serostatus + trial arm + age-group, over time
 # for multinomial likelihood
-
 N_VCD_BVJA_m = VCD2 %>%
     group_by(serostatus, trial, age, serotype, year) %>%
     summarise(Y = sum(Y)) %>%
@@ -175,7 +176,6 @@ VCD_KJ2_m = array(N_VCD_KJ2_m$Y, dim = c(K * J, 2))
 hosp_KJ2_m = array(N_hosp_KJ2_m$Y, dim = c(K * J, 2))
 
 # data
-  
 stan_data = list(
     time = time,
     T = T,
@@ -243,7 +243,6 @@ write.csv(posterior_chains, paste0(file_path, "/posterior_chains.csv"))
 posterior = summarise_draws(posterior_chains)
 write.csv(posterior, paste0(file_path, "/posterior.csv"))
 
-
 # save fit ---------------------------------------------------------------------  
 AR = which(grepl("AR" , names(fit_ext)))
 AR_out = fit_ext[AR] %>%  as.data.frame()
@@ -281,7 +280,6 @@ theme_set(
       text = element_text(size = 14),
       legend.spacing.y = unit(0, "pt"),
       legend.margin = margin(0, 0, 0, 0),
-      # legend.position = c(0.86,0.25),  CHANGE TO THIS IS PLOTTING VE AND AR TOGETHER 
       legend.position = c(0.9,0.75), 
       legend.title = element_blank()
     ))
@@ -289,20 +287,21 @@ theme_set(
 
 # plot VE 
 VE_plot =  VE_model %>%
-  filter(group == "VE") %>%
-  separate(name, into = c("Serostatus", "Serotype","Outcome", "Month")) %>%
+  filter(group == "VE_K") %>%
+  separate(name, into = c("serostatus", "serotype","outcome", "month")) %>%
   mutate(
-    Outcome = factor(Outcome, labels = c("symptomatic", "hospitalised")),
-    Serotype = factor(Serotype, labels = c("DENV1", "DENV2", "DENV3", "DENV4")),
-    Month = as.numeric(Month),
-    Serostatus = factor(Serostatus, labels = c("seronegative", "monotypic", "multitypic"))) %>% 
-  ggplot(aes(x = Month , y = mean)) +
-  geom_line(aes(color = Age)) +
-  geom_ribbon(aes(ymin = lower, ymax = upper, fill = Age), alpha = 0.5) +
-  labs(x = "Month", y = "Vaccine efficacy (%)") +
+    vaccine = "Qdenga", 
+    outcome = factor(outcome, labels = c("symptomatic", "hospitalised")),
+    serotype = factor(serotype, labels = c("DENV1", "DENV2", "DENV3", "DENV4")),
+    month = as.numeric(month),
+    serostatus = factor(serostatus, labels = c("seronegative", "monotypic", "multitypic"))) %>% 
+  ggplot(aes(x = month , y = mean)) +
+  geom_line(aes(color = vaccine)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper, fill = vaccine), alpha = 0.5) +
+  labs(x = "month", y = "Vaccine efficacy (%)") +
   scale_x_continuous(breaks = seq(0, 54,12)) +
   geom_hline(yintercept=0, linetype="dashed",color = "black", linewidth=1) +
-  facet_grid(Serostatus+Outcome ~ Serotype, scale= "free" ) +
+  facet_grid(serostatus+outcome ~ serotype, scale= "free" ) +
   theme(legend.position = c(0.07,0.07)) +
   scale_color_manual(values = age_fill_VE)+
   scale_fill_manual(values = age_fill_VE)
@@ -340,7 +339,7 @@ time_plot =  AR_model %>%
   geom_point(aes(color = trial, shape = type), position = position_dodge(width = 5), size = 3) +
   geom_errorbar( aes(ymin = lower ,ymax = upper ,color = trial, linetype = type),
                  position = position_dodge(width = 5),width =  0.4,linewidth =1) +
-  labs(x = "Month", y = "Attack rate (%)") +
+  labs(x = "month", y = "Attack rate (%)") +
   scale_x_continuous(breaks = c(12,18,24,36,48,54)) +
   scale_color_manual(values = trial_fill) +
   facet_wrap(~ outcome, ncol = 2) # CHANGE TO 1 IF PLOTTING AR AND VE TOGETHER 
@@ -435,7 +434,7 @@ serotype_plot = AR_model %>%
     width =  0.4,
     linewidth = 1
   ) +
-  # labs(x = "Month", y = "Attack rate (%)") + # CHANGE IF PLOTTING AR AND VE TOGETHER 
+  # labs(x = "month", y = "Attack rate (%)") + # CHANGE IF PLOTTING AR AND VE TOGETHER 
   labs(x = " ", y = "Attack rate (%)") +
   scale_color_manual(values = serotype_fill) +
   scale_x_discrete(
