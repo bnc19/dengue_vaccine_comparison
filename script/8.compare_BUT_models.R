@@ -55,7 +55,7 @@ rownames(d) = models
 colnames(d) = parameters
 
 # L
-d[1,1] = "global"
+d[1,1] = "serostatus"
 
 # beta
 d[c(1:2,6),2] = "age (youngest)"
@@ -89,6 +89,7 @@ df = left_join(d, ll) %>%
       depends,
       levels = c(
         "age (youngest)",
+        "serostatus", 
         "serostatus & serotype (serostatus = MO)",
         "serostatus & serotype (serostatus = MO, MU)",
         "serostatus & serotype",
@@ -97,7 +98,7 @@ df = left_join(d, ll) %>%
       ) )) %>%
   mutate(color = ifelse(model == 7, "red", "black"))
 
-mycols = c("#A6BDDB", "#1C9099",
+mycols = c("#A6BDDB", "#1C9099", "#6BAED6",
            "#666699", "#FBB4B9", 
            "#CCCCCC", "#FFFFFF")
 
