@@ -1,6 +1,5 @@
 # Create a figure comparing the parameters of the best fitting models for each vaccine
-
-
+library(tidyverse)
 
 model_dep = data.frame(
 vaccine = c("Dengvaxia", "Qdenga", "Butantan-DV"), 
@@ -17,7 +16,7 @@ kappa = c(NA, NA, NA),
 eta = c(NA, NA, "age (youngest)"),
 rho = c("global", "global", "global"),
 w = c("global", "global", "global"),
-alpha = c("global", "global", "global")
+alpha = c("global", "global", NA)
 )
 
 # format data ready to plot 
