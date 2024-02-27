@@ -9,9 +9,9 @@ factor_TAK_VCD = function(VCD){
                                levels = c("SN", "SP", "both"),
                                labels = c("seronegative", "seropositive", "both")),
            serotype = factor(serotype,levels = c("D1", "D2", "D3", "D4", "all"),
-                             labels = c("DENV-1", "DENV-2", "DENV-3", "DENV-4", "all")),
+                             labels = c("DENV1", "DENV2", "DENV3", "DENV4", "all")),
            trial = factor(trial, levels = c("P", "V","both"), 
-                          labels = c("placebo", "TAK-003", "both")))
+                          labels = c("placebo", "vaccine", "both")))
   
   return(VCD)
 }
@@ -19,14 +19,14 @@ factor_TAK_VCD = function(VCD){
 
 
 # 2: function to factorise serology data when importing it at the start of any script
-factor_TAK_serology= function(data){
+factor_serology= function(data){
   data = data  %>%  
     mutate(serostatus = factor(serostatus,
                                levels = c("SN", "SP"),
                                labels = c("seronegative", "seropositive")),
            serotype = factor(serotype),
            trial = factor(trial, levels = c("Placebo", "TAK"), 
-                          labels = c("placebo", "TAK-003")))
+                          labels = c("placebo", "vaccine")))
   
   return(data)
 }
