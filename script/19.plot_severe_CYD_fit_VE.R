@@ -25,7 +25,7 @@ theme_set(
   theme_light() +
     theme(
       text = element_text(size = 16),
-      legend.position = c(0.1,0.74),
+      legend.position = c(0.04,0.74),
       legend.title = element_blank(),
       plot.title = element_text(hjust = 0.5),
       legend.spacing.y = unit(0, "pt"),
@@ -194,8 +194,8 @@ AR_grid = cowplot::plot_grid(
 ggsave(
   plot = AR_grid,
   filename =  "CYD/output/figures/severe_fit_C.png",
-  height = 30,
-  width = 35,
+  height = 50,
+  width = 40,
   units = "cm",
   dpi = 600,
   scale = 0.9
@@ -206,9 +206,10 @@ VE_model = extract_CYD_model_results(VE)
 VE_model_HOSP = extract_CYD_model_results(VE_HOSP)
 
 VE_severe = VE_model %>% 
-  filter(group == "VE_BKRT") %>% 
-  separate(name, into = c("serostatus", "serotype", "outcome", "month")) %>%
+  filter(group == "VE") %>% 
+  separate(name, into = c("serostatus", "serotype", "age", "outcome", "month")) %>%
   mutate(
+    age = factor(age, labels = c("2-8yrs", "9-16yrs")), 
     outcome = factor(outcome, labels = c("symptomatic", "severe")), 
     serotype = factor(serotype, 
                       labels = c("DENV1", "DENV2", "DENV3", "DENV4")),
@@ -222,8 +223,8 @@ ggplot(aes(x = month , y = mean)) +
   geom_ribbon(aes(ymin = lower, ymax = upper, fill = outcome), alpha = 0.4) +
   labs(x = "Month", y = "Vaccine efficacy (%)") +
   scale_x_continuous(breaks = seq(0, 60,12)) +
-  facet_grid(serostatus ~ serotype, scales = "free") + theme_light() + 
-  theme(legend.position = c(0.88,0.1),
+  facet_grid(serostatus ~ age ~ serotype, scales = "free") + theme_light() + 
+  theme(legend.position = c(0.88,0.9),
         text = element_text(size = 18),
         legend.title = element_blank()) +
   geom_hline(yintercept=0, linetype="dashed",color = "black", linewidth=1) +
