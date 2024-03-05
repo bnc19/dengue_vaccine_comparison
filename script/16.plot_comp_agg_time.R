@@ -69,8 +69,8 @@ ggsave(
 tidy_CYD_VE_4.5 = format_4.5_year_VE(CYD_VE2)
 tidy_TAK_VE_4.5 = format_4.5_year_VE(TAK_VE2)
 
-tidy_CYD_VE_4.5$vaccine = "Dengvaxia"
-tidy_TAK_VE_4.5$vaccine = "Qdenga"
+tidy_CYD_VE_4.5$Vaccine = "Dengvaxia"
+tidy_TAK_VE_4.5$Vaccine = "Qdenga"
 
 year_4.5_comp = tidy_TAK_VE_4.5 %>% 
   bind_rows(tidy_CYD_VE_4.5) %>%  
