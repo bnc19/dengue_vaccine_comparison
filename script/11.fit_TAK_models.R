@@ -27,6 +27,7 @@ run_TAK_model (
 
 # M2 - as M1 MU offset from MO -------------------------------------------------
 run_TAK_model (
+  BF = T,
   mono_lc_MU = 2,
   include_pK3 = 0,
   rho_K = 0,
