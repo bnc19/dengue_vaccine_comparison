@@ -50,8 +50,11 @@ set.seed(10)
 
 # M7 --------------------------------------------------------------------------- 
 M7_post_sample = as.data.frame(sapply(M7_post, sample, I))
-lc3 = rnorm(I, 5.09, 0.5)
-lc4 = rnorm(I, 4.32, 0.5)
+r3 = 0.95
+r4 = 0.81
+
+lc3 = r3 *  M7_post_sample$lc.2.2.
+lc4 = r4 *  M7_post_sample$lc.2.2.
 
 M7_lc_SN = exp(replicate(K, M7_post_sample$lc.1.1.))
 M7_lc_MO = exp(cbind(M7_post_sample$lc.2.1., M7_post_sample$lc.2.2., lc3, lc4))
