@@ -18,30 +18,26 @@ options(mc.cores = parallel::detectCores())
 file.sources = paste0("TAK/R/", list.files(path = "TAK/R/"))
 sapply(file.sources, source)
 
+# file paths 
 folder = "M2_year2"
 file_path = (paste0("TAK/output/", folder))
 dir.create(file_path)
 
-# parameters 
-VCD_years = c(12, 18, 24) / 12
-time =1:24
-mono_lc_MU = 2
-include_pK3 = 0
-rho_K = 0
-include_beta = 3
-mono_lc_SN = 1
-tau_K = 1
-MU_test_SN = 1
+# stan parameters 
 n_it = 10000
 n_chains = 4
 adapt_delta = 0.77
+
+# import data 
 stan_model = "TAK_model_year2.stan"
 baseline_SP = read.csv("TAK/data/raw/seropositive_by_age_baseline.csv")
 VCD =  read.csv("TAK/data/processed/vcd_data.csv")
 hosp = read.csv("TAK/data/processed/hosp_data.csv") 
 mu =  array(read.csv("TAK/data/processed/n0_new.csv")$mean, dim = c(2, 4))
 cases =  readRDS("TAK/data/processed/case_data.RDS")
+BUT_VE = readRDS("BUT/output/M7/VE.RDS") # to compare 
 
+# initial values 
 init_values = function(){
   list(
     hs = runif(2, 2,4),
@@ -65,6 +61,9 @@ init_values = function(){
     epsilon = runif(1,1,4)
   )}
 
+# parameter values  
+VCD_years = c(12, 18, 24) / 12
+time = 1:24
 B = 2
 K = 4
 V = 2
@@ -72,6 +71,8 @@ R = 2
 J = 3
 C = 3
 HI = 12
+
+# model flags 
 include_eps = 0
 rho_K = 0
 L_K = 0
@@ -82,7 +83,12 @@ L_mean =0
 lower_bound_L = 0
 MU_test_SN = 1
 MU_symp = 1
-enhancement = 0
+enhancement = 0 # no enhancement to match Butantan-DV 
+mono_lc_MU = 2
+include_pK3 = 0
+include_beta = 3
+mono_lc_SN = 1
+tau_K = 1
 
 # data -----------------------------------------------------------------------
 hosp_f = factor_TAK_VCD(hosp)
@@ -222,7 +228,6 @@ stan_data = list(
 # fit model --------------------------------------------------------------------
 comp_model = cmdstan_model(paste0("TAK/models/", stan_model),stanc_options = list("O1"))
 
-start = Sys.time()
 stan_fit = comp_model$sample(
   data = stan_data,
   chains = n_chains,
@@ -234,8 +239,6 @@ stan_fit = comp_model$sample(
   seed = 14,
   refresh = 500,
   adapt_delta = adapt_delta)
-end = Sys.time()
-print(end - start)
 
 # save posts -------------------------------------------------------------------
 fit_ext = stan_fit$draws(format = "df")
@@ -256,15 +259,15 @@ VE = which(grepl("VE" , names(fit_ext)))
 VE_out = fit_ext[VE] %>%  as.data.frame()
 saveRDS(VE_out, paste0(file_path, "/VE.RDS"))
 
-n = which(grepl("n" , names(fit_ext)))
-n_out = fit_ext[n] %>%  as.data.frame()
-saveRDS(n_out, paste0(file_path, "/n.RDS"))
-
 # plot fit ---------------------------------------------------------------------
 # add aggregated populations to data and calculate attack rates
 # summarise over iterations 
 
+VE_out = readRDS(paste0(file_path, "/VE.RDS"))
+AR_out = readRDS(paste0(file_path, "/AR.RDS"))
+
 VE_model = extract_TAK_model_results(VE_out)  
+VE_model_BUT = extract_TAK_model_results(BUT_VE)  
 AR_model = extract_TAK_model_results(AR_out)  
 
 # calculate attack rates from data 
@@ -279,15 +282,11 @@ calc_AR = function(data){
 
 cases_AR = lapply(cases, calc_AR)
 
-data = cases_AR %>%  bind_rows() %>% 
-  filter(month <= 24) %>% 
-  mutate(trial = factor(trial, labels = c("placebo", "vaccine", "both")))
-
-
 # colours 
 age_fill = scales::brewer_pal(palette = "Blues")(4)[2:4]
 serotype_fill = scales::brewer_pal(palette = "RdPu")(6)[2:5] 
-trial_fill = scales::brewer_pal(palette = "PuBuGn")(3)[2:3]
+mycols = c("#1C9099",  "#9999FF")
+
 
 theme_set(
   theme_light() +
@@ -295,30 +294,45 @@ theme_set(
       text = element_text(size = 14),
       legend.spacing.y = unit(0, "pt"),
       legend.margin = margin(0, 0, 0, 0),
-      legend.position = c(0.9,0.75), 
+      legend.position = c(0.03,0.85), 
       legend.title = element_blank()
     ))
 
-# plot VE 
+# plot QDENGA VE vs. BUTANTAN-DV -----------------------------------------------
 VE_plot =  VE_model %>%
   filter(group == "VE_K") %>%
   separate(name, into = c("serostatus", "serotype","outcome", "month")) %>%
+  filter(outcome == 1, serotype %in% c(1,2)) %>% 
+  mutate(vaccine = "Qdenga") %>%  
+  bind_rows(separate(VE_model_BUT, name, into = c("serostatus", "serotype", "age", "month"))) %>%  
+  select(- outcome, - age) %>%  
   mutate(
-    vaccine = "Qdenga", 
-    outcome = factor(outcome, labels = c("symptomatic", "hospitalised")),
-    serotype = factor(serotype, labels = c("DENV1", "DENV2", "DENV3", "DENV4")),
+    vaccine = ifelse(is.na(vaccine), "Butantan-DV", vaccine), 
+    serotype = factor(serotype, labels = c("DENV1", "DENV2")),
     month = as.numeric(month),
     serostatus = factor(serostatus, labels = c("seronegative", "monotypic", "multitypic"))) %>% 
   ggplot(aes(x = month , y = mean)) +
   geom_line(aes(color = vaccine)) +
   geom_ribbon(aes(ymin = lower, ymax = upper, fill = vaccine), alpha = 0.5) +
-  labs(x = "month", y = "Vaccine efficacy (%)") +
-  scale_x_continuous(breaks = seq(0, 54,12)) +
-  geom_hline(yintercept=0, linetype="dashed",color = "black", linewidth=1) +
-  facet_grid(serostatus+outcome ~ serotype, scale= "free" ) +
-  theme(legend.position = c(0.07,0.07)) +
-  scale_color_manual(values = age_fill)+
-  scale_fill_manual(values = age_fill)
+  labs(x = "Month", y = "Vaccine efficacy (%)") +
+  scale_x_continuous(breaks = seq(0, 24, 6)) +
+  facet_grid(serostatus ~ serotype, scale= "free" ) +
+  theme(legend.position = c(0.09,0.05)) +
+  scale_color_manual(values = mycols) +
+  scale_fill_manual(values = mycols)
+
+
+ggsave(
+  plot = VE_plot,
+  filename =  "compare_vaccines/output/TAK_BUT_2_year_VE.png",
+  height = 25,
+  width = 32,
+  units = "cm",
+  dpi = 600,
+  scale = 0.7
+)
+
+# Plot AR ----------------------------------------------------------------------
 
 # Plot attack rates by age
 AR_plot_BVJRD = AR_model %>%
@@ -326,72 +340,99 @@ AR_plot_BVJRD = AR_model %>%
   separate(name, into = c("serostatus", "trial", "age", "outcome", "time")) %>% 
   mutate(serostatus = factor(serostatus, labels = c("seronegative", "seropositive")),
          trial = factor(trial, labels =c("placebo", "vaccine")),
-         outcome = factor(outcome, labels = c("symp", "hosp")),
+         outcome = factor(outcome, labels = c("symptomatic", "hospitalised")),
+         
          age = factor(age, labels = c("4-5yrs", "6-11yrs", "12-16yrs"), levels = c(1,2,3))) %>% 
   mutate(month = ifelse(time == 1, 12, ifelse(time == 2, 18, 24))) %>%
-  bind_rows(filter(data, age!="all", serotype =="all")) %>%
+  bind_rows(cases_AR$VCD_BVJA, cases_AR$HOSP_BVJA) %>%
+  mutate(outcome = ifelse(outcome == "symp", "symptomatic",
+                          ifelse(outcome == "hosp", "hospitalised", outcome))) %>% 
+  filter(month <= 24) %>% 
   ggplot(aes(x = month, y = mean)) +
   geom_point(aes(  shape = type, color = age,  group = interaction(type, age)),
     position = position_dodge(width = 2.5), size = 3) +
   geom_errorbar(aes(ymin = lower, ymax = upper, group = interaction(type, age), linetype = type, color = age),
     position = position_dodge(width =  2.5), width =  0.4, linewidth = 1) +
-  facet_grid(outcome+serostatus ~ trial, scales = "free") +
-  labs(x = "Month", y = "Attack rate (%)") +
-  theme(legend.position = c(0.9,0.9)) +
+  facet_grid(trial ~ outcome + serostatus, scales = "fixed" ) +
+  labs(x = "Month", y = "Attack rate (%)") + 
+  guides(shape = "none", linetype = "none") +
   scale_x_continuous(breaks = c(12,18,24,36)) +
-  scale_colour_manual(values = age_fill) 
+  scale_colour_manual(values = age_fill)
 
+# Plot attack rates by serotype 
+AR_plot_BVKRD =  AR_model %>%
+  filter(group == "AR_BVKRD") %>%
+  separate(name, into = c("serostatus", "trial", "serotype", "outcome", "month")) %>% 
+  filter(outcome == 1) %>% # symptomatic has each time point 
+  mutate(month = ifelse(month == 1, 12, ifelse(month == 2, 18, 24))) %>%
+  bind_rows(separate(filter(AR_model, group == "AR_BVKH"), # add hosp which has fewer time points 
+                     name, into = c("serostatus", "trial", "serotype"))) %>%  
+  mutate(serostatus = ifelse(serostatus == 1, "seronegative", "seropositive"),
+         trial = ifelse(trial == 1, "placebo", "vaccine"),
+         outcome = ifelse(outcome == 1, "symptomatic", "hospitalised"),
+         serotype = factor(serotype, labels= c("DENV1", "DENV2", "DENV3", "DENV4"))) %>% 
+  mutate(month = ifelse(is.na(month), 24,month )) %>%
+  mutate(outcome = ifelse(is.na(outcome), "hospitalised", outcome)) %>% 
+  bind_rows(cases_AR$N_hosp_BVK4, cases_AR$VCD_BVKD) %>%
+  mutate(outcome = ifelse(outcome == "symp", "symptomatic",
+                          ifelse(outcome == "hosp", "hospitalised", outcome))) %>%
+  filter(month <= 24) %>% 
+  ggplot(aes(x = month, y = mean)) +
+  geom_point(aes(shape = type, color = serotype, group = interaction(type, serotype)),
+    position = position_dodge(width = 2), size = 3) +
+  geom_errorbar(aes(ymin = lower, ymax = upper, group = interaction(type, serotype),
+      linetype = type, color = serotype),
+    position = position_dodge(width =  2), width =  0.4, linewidth = 1) +
+  facet_grid(trial ~ outcome + serostatus, scales = "fixed" ) +
+  labs(x = "Month", y = "Attack rate (%)") +
+  scale_x_continuous(breaks = c(12,18,24)) +
+  scale_colour_manual(values = serotype_fill) +
+  theme(legend.position = c(0.03,0.75))
+
+
+# plot by age and serotype
+AR_plot_KJRD =  AR_model %>%
+  filter(group == "AR_KJRD") %>%
+  separate(name, into = c("serotype", "age", "outcome", "month")) %>% 
+  mutate(month = ifelse(month == 1, 12, 24),
+         outcome = factor(outcome, labels = c("symptomatic", "hospitalised")),
+         serotype = factor(serotype, labels= c("DENV1", "DENV2", "DENV3", "DENV4")),
+         age = factor(age, labels = c("4-5yrs", "6-11yrs", "12-16yrs"))) %>% 
+  bind_rows(cases_AR$VCD_KJ2, cases_AR$HOSP_KJ2) %>%
+  mutate(outcome = ifelse(outcome == "symp", "symptomatic",
+                          ifelse(outcome == "hosp", "hospitalised", outcome))) %>%
+  ggplot(aes(x = month, y = mean)) +
+  geom_point(aes(shape = type, color = serotype, group = interaction(type, serotype)),
+             position = position_dodge(width = 3), size = 3) +
+  geom_errorbar(aes(ymin = lower, ymax = upper, group = interaction(type, serotype),
+                    linetype = type, color = serotype),
+                position = position_dodge(width =  3), width =  0.4, linewidth = 1) +
+  facet_grid(outcome~age, scales ="fixed") +
+  labs(x = "Month", y = "Attack rate (%)") +
+  guides(shape = "none",linetype = "none") +
+  theme(legend.position = "none")+
+  scale_x_continuous(breaks = c(12, 24)) +
+  scale_colour_manual(values = serotype_fill) 
 
 
 # combine all plots 
-g1 = cowplot::plot_grid(time_plot, age_plot, 
-                        serotype_plot, ncol=3, 
-                        axis = "tblr", align = "h",
-                        labels = c("a", "b", "c"))
-
-g2 = cowplot::plot_grid(g1, VE_plot, rel_heights = c(1,1.8),
-                        ncol =1, labels = c("", "d"))  
-
-ggsave(
-  plot = g2,
-  filename =  "TAK/output/figures/main_fit_ve_fig_T.png",
-  height = 45,
-  width = 50,
-  units = "cm",
-  dpi = 600,
-  scale = 0.75
-)
-
-# save sep plots 
-g3 = cowplot::plot_grid(time_plot, age_plot, 
-                        serotype_plot, ncol=1, 
+g1 = cowplot::plot_grid(AR_plot_BVJRD, AR_plot_BVKRD, 
+                        AR_plot_KJRD, ncol = 1, 
                         axis = "tblr", align = "h",
                         labels = c("a", "b", "c"))
 
 ggsave(
-  plot = g3,
-  filename =  "TAK/output/figures/main_fit_T.png",
-  height = 35,
-  width = 32,
+  plot = g1,
+  filename =  "TAK/output/figures/TAK_main_fit_year2.png",
+  height = 50,
+  width = 70,
   units = "cm",
   dpi = 600,
-  scale = 0.75
+  scale = 0.7
 )
 
-ggsave(
-  plot = VE_plot,
-  filename =  "TAK/output/figures/VE_T.png",
-  height = 40,
-  width = 45,
-  units = "cm",
-  dpi = 600,
-  scale = 0.75
-)
-
-
-# Calculate Bayes Factor with and without L parameter --------------------------
-# data
-stan_data_enhance = list(
+# Qdenga BF analysis -----------------------------------------------------------
+stan_data_L = list(
   time = time,
   T = T,
   J = J,
@@ -432,10 +473,8 @@ stan_data_enhance = list(
   VCD_KJ2 = VCD_KJ2_m
 )
 
-
-
-stan_fit_enhanhce = comp_model$sample(
-  data = stan_data_enhance,
+stan_fit_L = comp_model$sample(
+  data = stan_data_L,
   chains = n_chains,
   parallel_chains = n_chains,
   iter_warmup = floor(n_it/2),
@@ -447,10 +486,9 @@ stan_fit_enhanhce = comp_model$sample(
   adapt_delta = adapt_delta)
 
 calculate_TAK_bayes(
-  stan_fit = stan_fit_enhanhce,
+  stan_fit = stan_fit_L,
   L_mean = L_mean,
   L_sd = L_sd,
   file_path = file_path,
   lower = lower_bound_L
 )
-
