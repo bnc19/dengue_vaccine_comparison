@@ -53,7 +53,7 @@ ggsave(
   height = 30,
   width = 30,
   units = "cm",
-  dpi = 600,
+  dpi = 300,
   scale = 0.6
 )
 
