@@ -74,7 +74,7 @@ tidy_TAK_VE_4.5$Vaccine = "Qdenga"
 
 year_4.5_comp = tidy_TAK_VE_4.5 %>% 
   bind_rows(tidy_CYD_VE_4.5) %>%  
-  ggplot(aes(x = vaccine, y= mean, group = Serotype)) +
+  ggplot(aes(x = Vaccine, y= mean, group = Serotype)) +
   geom_point(aes(color = Serotype),
              position = position_dodge(0.4)) +
   geom_errorbar(aes(ymin = lower, ymax = upper, color = Serotype),
