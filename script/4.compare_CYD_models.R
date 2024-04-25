@@ -203,6 +203,8 @@ n_param_sev = c(35, 32, 33, 33, 34,
                 38)
 # compare WAIC
 comp_WAIC_sev = loo::loo_compare(WAIC_sev2) # models start from M0 
+best_model_sev = as.numeric(rownames(comp_WAIC_sev)[1])
+
 # M9 is the best fitting model
 
 waic_df_sev = comp_WAIC_sev %>%  
@@ -211,6 +213,7 @@ waic_df_sev = comp_WAIC_sev %>%
   select(model, elpd_diff, waic) %>% 
   mutate(model = as.numeric(model) + 1) # add 1 so on the same scale as other models 
 
+best_model_sev = best_model_sev + 1 # add 1 so on the same scale as other models 
 
 ll_source_sev = paste0("CYD/output/severe/", 
                        list.files(path = "CYD/output/severe/")[index_files_sev], "/posterior.csv")
@@ -283,7 +286,7 @@ df_sev = left_join(d_sev, ll_sev) %>%
         "global",
         "not included"
       ) )) %>%
-  mutate(color = ifelse(model == 10, "red", "black"))
+  mutate(color = ifelse(model == best_model_sev, "red", "black"))
 
 mycols_sev = c("#A6BDDB", "#1C9099", "#FBB4B9", 
            "#CCCCCC", "#FFFFFF")
@@ -339,7 +342,7 @@ p3_sev = df_sev %>%
 p4_sev = df_sev %>% 
   ggplot(aes(x = model-0.5, y = elpd_diff)) + # - 0.5 so aligns with other plots 
   geom_point(aes(color=color, size = color)) + geom_line() +
-  theme_bw() + ylab("Difference in ELPD \ncompared to model 11") +
+  theme_bw() + ylab(paste("Difference in ELPD \ncompared to model", best_model_sev)) +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
   scale_x_continuous(limits = c(0,16), breaks = 1:16) +
@@ -354,5 +357,5 @@ g1_sev = cowplot::plot_grid(p2_sev, NULL, p3_sev, NULL,p4_sev, NULL, p1_sev, nco
 
 
 ggsave(g1_sev, file = "CYD/output/figures/severe_model_variants_C.jpg",
-       height = 40, width = 50, units="cm", scale = 0.7)
+       height = 25, width = 30, units="cm", scale = 0.9)
 
