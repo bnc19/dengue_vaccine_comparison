@@ -8,6 +8,8 @@ serotype_serostatus_cases = read_excel("BUT/data/raw/cases.xlsx")
 age_cases = read_excel("BUT/data/raw/cases.xlsx", sheet = 2)
 baseline_seropos = read_excel("BUT/data/raw/baseline_SP.xlsx")
 titres = read_excel("BUT/data/raw/titres.xlsx")
+titres_uncert = read_excel("BUT/data/raw/titres_uncert.xlsx")
+trial_fill = scales::brewer_pal(palette = "PuBuGn")(3)[2:3]
 
 # colours 
 age_fill = scales::brewer_pal(palette = "Blues")(4)[2:4]
@@ -35,35 +37,35 @@ Sy_BVJ = cases %>%
   filter(serotype == "all") 
 
 Sy_BVJ_plot  = Sy_BVJ %>%   
-  ggplot(aes(x = serostatus, y = Y)) +
+  ggplot(aes(x = arm, y = Y)) +
   geom_bar(aes(fill = age), position = "stack", stat = "identity") +
-  ylab("Symptomatic cases") + xlab("Serostatus") +
+  ylab(" ") + xlab("Trial arm") +
   scale_y_continuous(limits = c(0,60), breaks = seq(0,60,10)) +
   scale_fill_manual(values = age_fill) +
-  theme(legend.position = c(0.8,0.8)) +
-  facet_grid(~arm) 
+  theme(legend.position = c(0.88,0.8)) +
+  facet_grid(~serostatus) 
 
 # Sy VK 
 Sy_BVK = cases %>% 
   filter(serotype != "all")
 
 Sy_BVK_plot = Sy_BVK %>%   
-  ggplot(aes(x = serostatus, y = Y)) +
+  ggplot(aes(x = arm, y = Y)) +
   geom_bar(aes(fill = serotype), position = "stack", stat = "identity") +
-  ylab(" ") + xlab("Serostatus") +
+  ylab("Symptomatic cases") + xlab("Trial arm") +
   scale_y_continuous(limits = c(0,60), breaks = seq(0,60,10)) +
   scale_fill_manual(values = serotype_fill) +
-  theme(legend.position = c(0.8,0.8)) +
-  facet_grid(~arm) 
+  theme(legend.position = c(0.89,0.82)) +
+  facet_grid(~serostatus) 
 
 
-grid_plot_data = plot_grid(Sy_BVJ_plot,
-                           Sy_BVK_plot, 
+grid_plot_data = plot_grid(Sy_BVK_plot,
+                           Sy_BVJ_plot,
                            ncol = 2, 
                            labels = c("a", "b"))
 
 ggsave(grid_plot_data, file = "BUT/output/figures/case_data.jpg",
-       height = 20, width = 40, scale =0.68, unit = "cm" )
+       height = 10, width = 30, scale = .9, unit = "cm" )
 
 # Save factorised data in list for Stan format 
 out = list(
@@ -103,3 +105,24 @@ titres %>%
   summarise(mean = mean(Titre)) %>% 
   mutate(log_titres = log(mean)) 
   
+
+# plot initial titres
+
+plot_titre = titres_uncert %>%  
+  mutate(Serostatus = factor(Serostatus, # make sure SN is first 
+                             levels = c("SN", "SP"),
+                             labels = c("seronegative", "seropositive"))) %>% 
+  mutate(Serotype = factor(Serotype, levels = c("D1", "D2", "D3", "D4"),
+                           labels = c("DENV1", "DENV2","DENV3", "DENV4"))) %>% 
+  ggplot(aes(x = Serotype, y = Titre, group = Serostatus)) +
+  geom_point(aes(color = Serostatus), position = position_dodge(0.5)) +
+  geom_errorbar(aes(ymin = Lower, ymax = Upper, color = Serostatus), 
+                position = position_dodge(0.5)) +
+  theme(legend.position = c(0.85,0.9)) +
+  scale_color_manual(values = trial_fill) +
+  xlab("Neutralised serotype") +
+  ylab("Neutralising titre \ninduced by Butantan-DV")
+  
+
+ggsave(plot_titre, file = "BUT/output/figures/plot_titre_B.jpg",
+       height = 10, width = 15, unit = "cm" )
