@@ -18,8 +18,8 @@ TAK_VE = readRDS(TAK_file)
 # VE 
 C_VE_model = extract_model_results(CYD_VE)  
 T_VE_model = extract_model_results(TAK_VE)  
-C_VE_model$vaccine = "Dengvaxia"
-T_VE_model$vaccine = "Qdenga"
+C_VE_model$Vaccine = "Dengvaxia"
+T_VE_model$Vaccine = "Qdenga"
 
 # combine both vaccines
 comb_VE = C_VE_model %>%
@@ -36,13 +36,14 @@ comb_VE = C_VE_model %>%
 plot_ve_over_time = comb_VE %>%   
   filter(month < 55) %>% 
   ggplot(aes(x = month, y = mean)) +
-  geom_line(aes(color = vaccine)) +
-  geom_ribbon(aes( ymin = lower, ymax = upper, fill = vaccine), alpha = 0.5) +
+  geom_line(aes(color = Vaccine)) +
+  geom_ribbon(aes( ymin = lower, ymax = upper, fill = Vaccine), alpha = 0.5) +
   labs(x = "Month", y = "Vaccine efficacy (%)") +
   geom_hline(yintercept = 0, linetype = "dashed",color = "black", linewidth=1) +
   facet_grid(serostatus + outcome ~ serotype, scales = "free") + 
   theme_light() + 
-  theme(plot.title = element_text(hjust = 0.5), legend.position = "top")+
+  theme(plot.title = element_text(hjust = 0.5), legend.title = element_blank(),
+        legend.position = "top")+
   scale_color_manual(values = mycols) +
   scale_fill_manual(values = mycols)
 
