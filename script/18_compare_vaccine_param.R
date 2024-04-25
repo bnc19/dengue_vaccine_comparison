@@ -52,7 +52,7 @@ p1 = df %>%
         legend.position = "bottom",
         plot.margin = margin(t = 0, r = 0, b = 0, l = 0)) +
   scale_fill_manual(values=mycols) +
-  scale_y_discrete(labels = c('omega' = expression(omega),
+  scale_x_discrete(labels = c('omega' = expression(omega),
                               "kappa" = expression(kappa),
                               "beta" = expression(beta),
                               "delta" = expression(delta),
