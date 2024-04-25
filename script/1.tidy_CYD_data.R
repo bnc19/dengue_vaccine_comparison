@@ -277,7 +277,7 @@ out2 = lapply(out, factor_CYD_cases)
 
 saveRDS(out2, file = "CYD/data/processed/cases_stan_format.RDS")
 
-# summarise titres by serotype and serostatus 
+# summarise titres by serotype and serostatus ----------------------------------
 
 # age-group populations are balanced in CYD14 and all over 9 in CYD15 
 # so don't need to take a weighted average over age 
@@ -307,3 +307,52 @@ tidy_titres %>%
   pivot_longer(cols = D1:D4, names_to = "serotype", values_to = "titre") %>%  
 group_by(serostatus) %>% 
   summarise(mean = log(mean(titre)))
+
+
+# age-group populations are balanced in CYD14 and all over 9 in CYD15 
+# so don't need to take a weighted average over age 
+
+## plot titres
+
+pop_sero_age = data.frame(
+  trial = c("CYD14", "CYD14", 
+            "CYD14", "CYD14",
+            "CYD15", "CYD15"),
+  serostatus = c("SN", "SP",
+                 "SN", "SP",
+                 "SN", "SP"),
+  N = c(round(423/2),round(423/2),
+        round(900/2),round(900/2),
+        251, 1048),
+  age = c("2-8yrs", "2-8yrs", 
+          "9-16yrs", "9-16yrs",
+          "9-16yrs", "9-16yrs")
+)
+
+
+plot_titre = raw_titres %>% 
+  mutate(age = ifelse(age == "9-14yrs", "9-16yrs", age)) %>% 
+  pivot_longer(cols = t0:t4, names_to = "time", values_to = "titre") %>% 
+  select(-N) %>% 
+  left_join(pop_sero_age) %>% 
+  mutate(serostatus = factor(serostatus, # make sure SN is first 
+                             levels = c("SN", "SP"),
+                             labels = c("seronegative", "seropositive"))) %>% 
+  mutate(serotype = factor(serotype, levels = c("D1", "D2", "D3", "D4"),
+                           labels = c("DENV1", "DENV2","DENV3", "DENV4"))) %>% 
+  mutate(time = ifelse(time == "t0", 0, 
+                       ifelse(time == "t1", 12,
+                              ifelse(time == "t3", 24, 36)))) %>% 
+  group_by(serotype, serostatus, age, time) %>% 
+  summarise(titre = weighted.mean(titre, N)) %>%  # weighted mean by trial size 
+  ggplot(aes(x = time, y = titre)) + 
+  geom_point(aes(color = serostatus, shape = age)) +
+  geom_line(aes(color = serostatus, linetype = age)) +
+  facet_grid(~serotype) +
+  ylab("Neutralising titre \ninduced by Dengvaxia") + xlab("Month PD3") +
+  scale_color_manual(values = trial_fill) +
+    theme(legend.position = c(0.92,0.7))
+
+
+ggsave(plot_titre, file = "CYD/output/figures/plot_titre_C.jpg",
+       height = 7, width = 24, unit = "cm" )

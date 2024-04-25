@@ -20,6 +20,8 @@ WAIC2 = WAIC[as.character(sort(as.numeric(n1)))]
 # compare WAIC
 comp_WAIC = loo::loo_compare(WAIC2) # M12 
 
+best_model = as.numeric(rownames(comp_WAIC)[1])
+
 # extract waic and elpd 
 waic_df = comp_WAIC %>%  
   as.data.frame() %>% 
@@ -107,7 +109,7 @@ df = left_join(d, ll) %>%
         "global",
         "not included"
       ) )) %>%
-  mutate(color = ifelse(model == 12, "red", "black"))
+  mutate(color = ifelse(model == best_model, "red", "black"))
 
 mycols = c("#A6BDDB", "#1C9099", "#6BAED6",
            "#666699", "#FBB4B9", 
@@ -164,7 +166,7 @@ p3 = df %>%
 p4 =df %>% 
   ggplot(aes(x = model-0.5, y = elpd_diff)) + # - 0.5 so aligns with other plots 
   geom_point(aes(color=color, size = color)) + geom_line() +
-  theme_bw() + ylab("Difference in ELPD \ncompared to model 11") +
+  theme_bw() + ylab(paste("Difference in ELPD \ncompared to model", best_model)) +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
   scale_x_continuous(limits = c(0,13), breaks = 1:13) +
@@ -174,12 +176,12 @@ p4 =df %>%
         plot.margin = margin(t = 0, r = 0, b = 0, l = 0)) 
 
 g1 = cowplot::plot_grid(p2, NULL, p3, NULL,p4, NULL, p1, ncol=1, 
-                        rel_heights = c(1,-0.3,1,-0.3,1,-0.3, 1.8), 
+                        rel_heights = c(1,0,1,0,1,0, 1.8), 
                         axis = "tblr", align = "hv")
 
 
 ggsave(g1, file = "CYD/output/figures/model_variants_C.jpg",
-       height = 40, width = 50, units="cm", scale = 0.7)
+       height = 30, width = 30, units="cm", scale = 0.7)
 
 
 ################################################################################
@@ -194,7 +196,6 @@ WAIC_sev = (lapply(source_files_sev, readRDS))
 n2 = gsub("/WAIC.RDS", "", gsub("CYD/output/severe/M", "", source_files_sev))
 names(WAIC_sev) = n2
 WAIC_sev2 = WAIC_sev[as.character(sort(as.numeric(n2)))]
-
 
 n_param_sev = c(35, 32, 33, 33, 34, 
                 35, 36, 34, 35, 39, 

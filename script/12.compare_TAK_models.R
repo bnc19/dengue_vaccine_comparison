@@ -15,9 +15,9 @@ WAIC2 = WAIC[as.character(sort(as.numeric(n1)))]
 
 # compare WAIC
 comp_WAIC = loo::loo_compare(WAIC2)
+best_model = as.numeric(rownames(comp_WAIC)[1])
 
 # Model 2 
-
 # extract waic and elpd 
 waic_df = comp_WAIC %>%  
   as.data.frame() %>% 
@@ -26,7 +26,6 @@ waic_df = comp_WAIC %>%
   mutate(model = as.numeric(model))
 
 # get log lik
-
 ll_source = paste0("TAK/output/", list.files(path = "TAK/output/")[index_files], "/posterior.csv")
 post = bind_rows(lapply(ll_source, read.csv))
 
@@ -37,7 +36,6 @@ select(mean, q5, q95, model) %>%
   arrange(model) %>% 
   left_join(waic_df)
   
-
 models = as.numeric(paste0(1:4))
 parameters= c("lc",  "omega", "kappa")
 
@@ -85,9 +83,7 @@ df = left_join(d, ll) %>%
         "global",
         "not included"
       ) )) %>%
-  mutate(color = ifelse(model == 2, "red", "black"))
-
-
+  mutate(color = ifelse(model == best_model, "red", "black"))
 
 mycols = c("#A6BDDB", "#1C9099",
            "#666699", "#FBB4B9", 
@@ -128,7 +124,7 @@ p2 = df %>%
 p3 =df %>% 
   ggplot(aes(x = model-0.5, y = elpd_diff)) + # - 0.5 so aligns with other plots 
   geom_point(aes(color=color, size = color)) + geom_line() +
-  theme_bw() + ylab("Difference in ELPD \ncompared to model 30") +
+  theme_bw() + ylab(paste("Difference in ELPD \ncompared to model", best_model)) +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
   scale_x_continuous(limits = c(0,4), breaks = 1:4) +
@@ -138,11 +134,11 @@ p3 =df %>%
         plot.margin = margin(t = 0, r = 0, b = 0, l = 0)) 
 
 g1 = cowplot::plot_grid(p2, NULL, p3, NULL, p1, ncol=1, 
-                        rel_heights = c(1,-0.3,1,-0.3, 1.8), 
+                        rel_heights = c(1,0,1,0, 1.8), 
                         axis = "tblr", align = "hv")
 
 
 ggsave(g1, file = "TAK/output/figures/model_variants_T.jpg",
-       height = 40, width = 50, units="cm", scale = 0.7)
+       height = 20, width = 30, units="cm", scale = 0.7)
 
 
