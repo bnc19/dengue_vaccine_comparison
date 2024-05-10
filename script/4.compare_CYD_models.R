@@ -111,7 +111,8 @@ df = left_join(d, ll) %>%
 
 mycols = c("#1C9099", "#6BAED6",
            "#666699", "#FBB4B9", 
-           "#FEEBE2", "#CCCCCC", "#FFFFFF")
+           "#FEEBE2", "#CCCCCC",
+           "#FFFFFF")
 
 
 
@@ -242,8 +243,6 @@ d_sev = m_sev %>%
 rownames(d_sev) = models_sev
 colnames(d_sev) = parameters_sev
 
-# TO DO: CHECK VARIANT FIGURE AGAINST MODEL RUNS
-
 # L
 d_sev[ ,1] = "global"
 d_sev[c(1,10,12:16), 1] = "serotype"
@@ -288,8 +287,9 @@ df_sev = left_join(d_sev, ll_sev) %>%
       ) )) %>%
   mutate(color = ifelse(model == best_model_sev, "red", "black"))
 
-mycols_sev = c("#A6BDDB", "#1C9099", "#FBB4B9", 
-           "#CCCCCC", "#FFFFFF")
+mycols_sev = c( "#1C9099","#666699",
+                "#A6BDDB","#CCCCCC", "#FFFFFF")
+
 
 # plot parameter dependencies 
 p1_sev = df_sev %>%
@@ -327,7 +327,7 @@ p2_sev = df_sev %>%
 p3_sev = df_sev %>% 
   ggplot(aes(x = model-0.5, y = param)) + # - 0.5 so aligns with other plots 
   geom_point(aes(color=color, size = color)) + geom_line() +
-  theme_bw() + ylab("Number of parameters") +
+  theme_bw() + ylab("Number of \nparameters") +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
   scale_x_continuous(limits = c(0,16), breaks = 1:16) +
@@ -342,7 +342,7 @@ p3_sev = df_sev %>%
 p4_sev = df_sev %>% 
   ggplot(aes(x = model-0.5, y = elpd_diff)) + # - 0.5 so aligns with other plots 
   geom_point(aes(color=color, size = color)) + geom_line() +
-  theme_bw() + ylab(paste("Difference in ELPD \ncompared to model", best_model_sev)) +
+  theme_bw() + ylab(paste("Difference  \nin ELPD compared \nto model", best_model_sev)) +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
   scale_x_continuous(limits = c(0,16), breaks = 1:16) +
