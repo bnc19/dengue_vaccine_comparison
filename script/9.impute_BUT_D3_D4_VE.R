@@ -56,6 +56,13 @@ r4 = 0.81
 lc3 = r3 *  M7_post_sample$lc.2.2.
 lc4 = r4 *  M7_post_sample$lc.2.2.
 
+round(mean(lc3),2)
+round(quantile(lc3, c(0.025, 0.975)), 2)
+
+round(mean(lc4), 2)
+round(quantile(lc4, c(0.025, 0.975)), 2)
+
+
 M7_lc_SN = exp(replicate(K, M7_post_sample$lc.1.1.))
 M7_lc_MO = exp(cbind(M7_post_sample$lc.2.1., M7_post_sample$lc.2.2., lc3, lc4))
 M7_lc_MU = M7_lc_MO * exp(-M7_post_sample$omega) 
