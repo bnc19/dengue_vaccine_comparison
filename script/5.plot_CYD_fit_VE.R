@@ -85,8 +85,8 @@ ggsave(
 ggsave(
   plot = AR_plot,
   filename =  "CYD/output/figures/main_fit_C.png",
-  height = 30,
-  width = 35,
+  height = 27,
+  width = 30,
   units = "cm",
   dpi = 600,
   scale = 0.9

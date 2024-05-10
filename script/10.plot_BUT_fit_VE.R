@@ -7,7 +7,7 @@ library(tidyverse)
 library(Hmisc)
 library(wesanderson)
 library(readxl)
-library(patchwork)
+library(cowplot)
 
 theme_set(
   theme_light() +
@@ -33,8 +33,8 @@ path = "BUT/output/M7/"
 # Data 
 VE = readRDS(paste0(path, "VE.RDS"))
 AR = readRDS(paste0(path, "AR.RDS"))
-serotype_serostatus_cases = read_excel("BUT/data/cases.xlsx")
-age_cases = read_excel("BUT/data/cases.xlsx", sheet = 2)
+serotype_serostatus_cases = read_excel("BUT/data/raw/cases.xlsx")
+age_cases = read_excel("BUT/data/raw/cases.xlsx", sheet = 2)
 
 # Tidy data 
 serotype_serostatus_cases = factor_BUT_cases(serotype_serostatus_cases)
@@ -50,20 +50,22 @@ AR_model = extract_BUT_model_results(AR)
 # plot serotype serostatus attack rate 
 AR_plot_BVK = AR_model %>%
   filter(group == "AR_BVK") %>%
-  separate(name, into = c("Serostatus", "Arm", "Serotype")) %>% 
-  mutate(Arm = factor(Arm, labels = c("placebo", "vaccine")),
-         Serostatus = factor(Serostatus, labels = c("seronegative", "seropositive")),
-         Serotype = factor(Serotype, labels = c(paste0("DENV", 1:2)))) %>% 
+  separate(name, into = c("serostatus", "arm", "serotype")) %>% 
+  mutate(arm = factor(arm, labels = c("placebo", "vaccine")),
+         serostatus = factor(serostatus, labels = c("seronegative", "seropositive")),
+         serotype = factor(serotype, labels = c(paste0("DENV", 1:2)))) %>% 
   bind_rows(AR_serotype_data) %>%
-  ggplot(aes(x = Arm, y = mean)) +
-  geom_point(aes(shape = type,color = Serotype,group = interaction(type, Serotype)),
+  ggplot(aes(x = arm, y = mean)) +
+  geom_point(aes(shape = type,color = serotype,
+                 group = interaction(type, serotype)),
     position = position_dodge(width = 0.5),size = 3) +
-  geom_errorbar(aes(ymin = lower, ymax = upper, group = interaction(type, Serotype),
-      linetype = type, color = Serotype),
+  geom_errorbar(aes(ymin = lower, ymax = upper, 
+                    group = interaction(type, serotype),
+      linetype = type, color = serotype),
     position = position_dodge(width =  0.5),width =  0.4,linewidth = 1) +
   labs(x = " ", y = "Symptomatic \nattack rate (%)") +
-  facet_wrap(~ Serostatus) + theme_light() +
-  theme(legend.position =c(0.87,0.8),
+  facet_wrap(~ serostatus) + theme_light() +
+  theme(legend.position =c(0.87,0.73),
         text = element_text(size = 18),
         legend.title = element_blank(),
         legend.spacing.y = unit(0, "pt"),
@@ -79,15 +81,17 @@ AR_plot_BVJ = AR_model %>%
          serostatus = factor(serostatus, labels = c("seronegative", "seropositive")),
          age = factor(age, labels = c("2-6yrs", "7-17yrs", "18-59yrs"))) %>% 
   bind_rows(AR_age_data) %>%
-  ggplot(aes(x = Arm, y = mean)) +
-  geom_point(aes(shape = type, color = Age, group = interaction(type, Age)),
+  ggplot(aes(x = arm, y = mean)) +
+  geom_point(aes(shape = type, color = age,
+                 group = interaction(type, age)),
     position = position_dodge(width = 0.5), size = 3) +
-  geom_errorbar(aes(ymin = lower, ymax = upper, group = interaction(type, Age),
-      linetype = type, color = Age),
+  geom_errorbar(aes(ymin = lower, ymax = upper, 
+                    group = interaction(type, age),
+      linetype = type, color = age),
     position = position_dodge(width =  0.5), width =  0.4, linewidth = 1) +
-  labs(x = " ", y = "Symptomatic \nattack rate (%)") + # DELETE Y LAB IF COMBINED AR AND VE FIGURE 
+  labs(x = " ", y = " ") + # DELETE Y LAB IF COMBINED AR AND VE FIGURE 
   guides(shape = "none",linetype = "none") +
-  theme(legend.position =c(0.87,0.8),
+  theme(legend.position =c(0.85,0.8),
         text = element_text(size = 18),
         legend.title = element_blank()) +
   facet_wrap(~ serostatus)  + 
@@ -122,33 +126,21 @@ VE_plot =  VE_model %>%
   scale_color_manual(values = serotype_fill) +
   scale_fill_manual(values = serotype_fill)
 
-# combine all plots 
-g1 = (AR_plot_BVK + AR_plot_VJ )/  VE_plot + plot_annotation(tag_levels = 'a')
-      
-
-ggsave(
-  plot = g1,
-  filename =  "BUT/output/figures/main_fit_ve_fig_B.png",
-  height = 30,
-  width = 40,
-  units = "cm",
-  dpi = 600,
-  scale = 0.8
-)
 
 # plot sep 
 
-g2 = AR_plot_BVK / AR_plot_BVJ  + plot_annotation(tag_levels = 'a')
-
+g2 = plot_grid(AR_plot_BVK,  AR_plot_BVJ,
+               labels = c("a", "b"),
+               rel_widths = c(1.1,1))
 
 ggsave(
   plot = g2,
   filename =  "BUT/output/figures/main_fit_B.png",
-  height = 25,
-  width = 27,
+  height = 9,
+  width = 29,
   units = "cm",
   dpi = 600,
-  scale = 0.8
+  scale = 0.9
 )
 
 ggsave(
