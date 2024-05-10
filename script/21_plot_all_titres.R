@@ -120,7 +120,7 @@ T_plot_titres = T_titres %>%
 # combine titres
 
 titre_grid = cowplot::plot_grid(C_plot_titre, T_plot_titres,
-                   B_plot_titre, ncol = 1)
+                   B_plot_titre, ncol = 1, labels = c("a", "b", "c"))
 
 
 ggsave(titre_grid, file = "compare_vaccines/output/plot_titres.jpg",
