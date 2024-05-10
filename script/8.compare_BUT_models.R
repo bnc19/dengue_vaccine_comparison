@@ -44,7 +44,7 @@ ll = post %>%
 
 # models 
 models = as.numeric(paste0(1:length(n_param)))
-parameters= c("L", "beta", "lc", "omega", "kappa", "eta")
+parameters= c("L", "beta", "lc", "omega", "eta")
 
 # create empty matrix 
 m = matrix(nrow = length(models), ncol = length(parameters))
@@ -60,22 +60,20 @@ colnames(d) = parameters
 d[1,1] = "serostatus"
 
 # beta
-d[c(1:2,6),2] = "age (youngest)"
+d[c(1:2,6),2] = "age_2-6"
 
 # lc 
-d[1:3,3] = "serostatus & serotype (serostatus = MO)"
-d[4:7,3] = "serostatus & serotype (serostatus = MO, MU)"
+d[1:3,3] = "serostatus & serotype_MO"
+d[4:7,3] = "serostatus & serotype_MO\nMU"
 d[5,3] = "serostatus & serotype"
 d[8,3] = "global"
 
 # omega
-d[4:7,4] = "global" 
-
-# kappa 
-d[5,5] = "global"
+d[4:7,4] = "serostatus_MU" 
+d[5,4] = "serostatus_SN\nMU" 
 
 # eta
-d[7:8,6] = "age (youngest)"
+d[7:8,5] = "age_2-6"
 
 # add log lik to dependency matrix 
 d$model = models
@@ -86,22 +84,21 @@ df = left_join(d, ll) %>%
                names_to = "Parameter",
                values_to = "depends") %>%
   mutate(depends = ifelse(is.na(depends), "not included", depends)) %>%
+  separate(depends, into = c("depends", "extra"), sep = "_") %>%
   mutate(
     depends = factor(
       depends,
       levels = c(
-        "age (youngest)",
+        "age",
         "serostatus", 
-        "serostatus & serotype (serostatus = MO)",
-        "serostatus & serotype (serostatus = MO, MU)",
         "serostatus & serotype",
         "global",
         "not included"
       ) )) %>%
   mutate(color = ifelse(model == best_model, "red", "black"))
 
-mycols = c("#A6BDDB", "#1C9099", "#6BAED6",
-           "#666699", "#FBB4B9", 
+mycols = c("#1C9099", "#FEEBE2",
+           "#FBB4B9",
            "#CCCCCC", "#FFFFFF")
 
 # plot parameter dependencies 
@@ -114,8 +111,8 @@ p1 = df %>%
         plot.margin = margin(t = 0, r = 0, b = 0, l = 0)) +
   scale_x_continuous(limits = c(0.5,8.5),breaks = 1:8) +
   scale_fill_manual(values=mycols) +
+  geom_text(aes(label=extra),size=3) + # add extra dependency info as letters 
   scale_y_discrete(labels = c('omega' = expression(omega),
-                              "kappa" = expression(kappa),
                               "beta" = expression(beta),
                               "eta" = expression(eta))) +
   xlab("Model")
@@ -164,11 +161,11 @@ p4 =df %>%
         plot.margin = margin(t = 0, r = 0, b = 0, l = 0)) 
 
 g1 = cowplot::plot_grid(p2, NULL, p3, NULL,p4, NULL, p1, ncol=1, 
-                        rel_heights = c(1,0,1,0,1,0, 2), 
+                        rel_heights = c(1,-.45,1,-.45,1,-.45, 2), 
                         axis = "tblr", align = "hv")
 
 
 ggsave(g1, file = "BUT/output/figures/model_variants_B.jpg",
-       height = 25, width = 25, units="cm", scale = 0.8)
+       height = 25, width = 30, units="cm", scale = 0.8)
 
 

@@ -43,7 +43,7 @@ ll = post %>%
 
 # models 
 models = as.numeric(paste0(1:length(n_param)))
-parameters= c("L", "delta", "lc", "beta", "p", "tau", "omega", "kappa")
+parameters= c("L", "delta", "lc", "beta", "p", "tau", "omega")
 
 # create empty matrix 
 m = matrix(nrow = length(models), ncol = length(parameters))
@@ -65,8 +65,8 @@ d[4,2] = "global"
 d[5:13,2] = "age"
 
 # lc 
-d[ ,3] = "serostatus & serotype (serostatus = MO)"
-d[c(8,12,13),3] = "serostatus & serotype (serostatus = MO, MU)"
+d[ ,3] = "serostatus & serotype_MO"
+d[c(8,12,13),3] = "serostatus & serotype_MO\nMU"
 d[9:11,3] = "serostatus & serotype"
 
 # beta
@@ -82,20 +82,19 @@ d[ ,6] = "serotype"
 d[c(3,6,10:13) ,6] = "global"
 
 # omega
-d[8:13,7] = "global"
-
-# kappa
-d[9:11, 8] = "global"
+d[c(8, 12:13), 7] =  "serostatus_MU"
+d[9:11, 7] = "serostatus_SN\nMU"
 
 # add log lik to dependency matrix 
 d$model = models
 
 # format data ready to plot 
 df = left_join(d, ll) %>%
-  pivot_longer(cols = L:kappa,
+  pivot_longer(cols = L:omega,
                names_to = "Parameter",
                values_to = "depends") %>%
   mutate(depends = ifelse(is.na(depends), "not included", depends)) %>%
+  separate(depends, into = c("depends", "extra"), sep = "_") %>%
   mutate(
     depends = factor(
       depends,
@@ -104,22 +103,24 @@ df = left_join(d, ll) %>%
         "serotype & age",
         "serotype",
         "serostatus & serotype",
-        "serostatus & serotype (serostatus = MO)",
-        "serostatus & serotype (serostatus = MO, MU)",
+        "serostatus",
         "global",
         "not included"
       ) )) %>%
   mutate(color = ifelse(model == best_model, "red", "black"))
 
-mycols = c("#A6BDDB", "#1C9099", "#6BAED6",
+mycols = c("#1C9099", "#6BAED6",
            "#666699", "#FBB4B9", 
            "#FEEBE2", "#CCCCCC", "#FFFFFF")
+
+
 
 # plot parameter dependencies 
 p1 = df %>%
   ggplot(aes(x = model, y = Parameter)) +
   geom_tile(aes(fill = depends), color = "black", alpha =0.6) +
   theme_classic() +
+  geom_text(aes(label=extra),size=3) + # add extra dependency info as letters 
   theme(legend.title = element_blank(),
         legend.position = "bottom",
         plot.margin = margin(t = 0, r = 0, b = 0, l = 0)) +
@@ -127,7 +128,6 @@ p1 = df %>%
   scale_fill_manual(values=mycols) +
   scale_y_discrete(labels = c('omega' = expression(omega),
                               'tau'   = expression(tau),
-                              "kappa" = expression(kappa),
                               "beta" = expression(beta),
                               "delta" = expression(delta))) +
   ylab("Model")
@@ -176,12 +176,12 @@ p4 =df %>%
         plot.margin = margin(t = 0, r = 0, b = 0, l = 0)) 
 
 g1 = cowplot::plot_grid(p2, NULL, p3, NULL,p4, NULL, p1, ncol=1, 
-                        rel_heights = c(1,0,1,0,1,0, 1.8), 
+                        rel_heights = c(1,-.4,1,-.4,1,-.4, 1.8), 
                         axis = "tblr", align = "hv")
 
 
 ggsave(g1, file = "CYD/output/figures/model_variants_C.jpg",
-       height = 30, width = 30, units="cm", scale = 0.7)
+       height = 30, width = 35, units="cm", scale = 0.7)
 
 
 ################################################################################
