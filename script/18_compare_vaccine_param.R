@@ -11,8 +11,7 @@ lc = c("serostatus & serotype (serostatus = MO, MU)",
 beta = c(NA, "age (youngest)", NA),
 p = c("age", "age", "age"),
 tau = c("global", "serotype", NA ), 
-omega = c("global", "global", "global"),
-kappa = c(NA, NA, NA),
+omega = c("serostatus (MU)", "serostatus (MU)", "serostatus (MU)"),
 eta = c(NA, NA, "age (youngest)"),
 rho = c("global", "global", "global"),
 w = c("global", "global", "global"),
@@ -34,13 +33,14 @@ df = model_dep %>%
         "age (youngest)",
         "serostatus",
         "serostatus & serotype (serostatus = MO, MU)",
+        "serostatus (MU)", 
         "serostatus & serotype",
         "global",
         "not included"
       ) ))
 
 mycols = c("#A6BDDB", "#1C9099", "#6BAED6",
-           "#666699", "#FBB4B9", 
+           "#666699", "#FBB4B9",  "#99CCCC",
            "#FEEBE2", "#CCCCCC", "#FFFFFF")
 
 # plot parameter dependencies 
@@ -53,7 +53,6 @@ p1 = df %>%
         plot.margin = margin(t = 0, r = 0, b = 0, l = 0)) +
   scale_fill_manual(values=mycols) +
   scale_x_discrete(labels = c('omega' = expression(omega),
-                              "kappa" = expression(kappa),
                               "beta" = expression(beta),
                               "delta" = expression(delta),
                               "alpha" = expression(alpha),
