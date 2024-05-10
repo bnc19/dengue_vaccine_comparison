@@ -152,7 +152,7 @@ p2 = df %>%
 p3 = df %>% 
   ggplot(aes(x = model-0.5, y = param)) + # - 0.5 so aligns with other plots 
   geom_point(aes(color=color, size = color)) + geom_line() +
-  theme_bw() + ylab("Number of parameters") +
+  theme_bw() + ylab("Number of \nparameters") +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
   scale_x_continuous(limits = c(0,13), breaks = 1:13) +
@@ -167,7 +167,7 @@ p3 = df %>%
 p4 =df %>% 
   ggplot(aes(x = model-0.5, y = elpd_diff)) + # - 0.5 so aligns with other plots 
   geom_point(aes(color=color, size = color)) + geom_line() +
-  theme_bw() + ylab(paste("Difference in ELPD \ncompared to model", best_model)) +
+  theme_bw() + ylab(paste("Difference in \nELPD compared \nto model", best_model)) +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
   scale_x_continuous(limits = c(0,13), breaks = 1:13) +
