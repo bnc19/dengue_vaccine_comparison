@@ -5,6 +5,16 @@ rm(list=ls())
 library(tidyverse)
 library(cowplot)
 
+theme_set(
+  theme_bw() +
+    theme(
+      text = element_text(size = 12),
+      legend.title = element_blank(),
+      plot.title = element_text(hjust = 0.5),
+      legend.spacing.y = unit(0, "pt"),
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      legend.margin = margin(0, 0, 0, 0)))
+
 n_param = c(15,14,13, 13, 13,
             14, 14, 11)
 # read waic
@@ -123,7 +133,7 @@ p2 = df %>%
   geom_point(aes(color=color, size = color)) + geom_line() +
   geom_ribbon(aes(ymin = q5, ymax = q95), alpha =0.2) + 
   scale_x_continuous(limits = c(0,8), breaks = 1:8) + 
-  ylab("Log-likelihood") +
+  ylab("\nLog-likelihood") +
   xlab(" ")  + theme_bw() +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
@@ -136,7 +146,7 @@ p2 = df %>%
 p3 =df %>% 
   ggplot(aes(x = model-0.5, y = param)) + # - 0.5 so aligns with other plots 
   geom_point(aes(color=color, size = color)) + geom_line() +
-  theme_bw() + ylab("Number of \nparameters") +
+  theme_bw() + ylab("Number \nof parameters") +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
   scale_x_continuous(limits = c(0,8), breaks = 1:8) +
@@ -151,7 +161,7 @@ p3 =df %>%
 p4 =df %>% 
   ggplot(aes(x = model-0.5, y = elpd_diff)) + # - 0.5 so aligns with other plots 
   geom_point(aes(color=color, size = color)) + geom_line() +
-  theme_bw() + ylab(paste("Difference in \nELPD compared \nto model", best_model)) +
+  theme_bw() + ylab(paste("ELPD \ncompared to M", best_model)) +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
   scale_x_continuous(limits = c(0,8), breaks = 1:8) +
@@ -162,10 +172,11 @@ p4 =df %>%
 
 g1 = cowplot::plot_grid(p2, NULL, p3, NULL,p4, NULL, p1, ncol=1, 
                         rel_heights = c(1,-.4,1,-.4,1,-.4, 2), 
+                        labels = c("a", "", "b", "", "c", "d"),
                         axis = "tblr", align = "hv")
 
 
 ggsave(g1, file = "BUT/output/figures/model_variants_B.jpg",
-       height = 25, width = 30, units="cm", scale = 0.8)
+       height = 20, width = 18, units="cm")
 
 

@@ -21,8 +21,6 @@ tidy_post_CYD = posterior_CYD %>%
 # only present min and max FOI and present in scientific notation 
 lambda_post_CYD = tidy_post_CYD %>%
   filter(grepl("lambda", variable)) %>%
-  filter(mean == max(mean) |
-           mean == min(mean)) %>%
   mutate_if(is.numeric, formatC, format = "e", digits = 2)
 
 
@@ -60,8 +58,6 @@ tidy_post_CYD_sev = posterior_CYD_sev %>%
 # only present min and max FOI and present in scientific notation 
 lambda_post_CYD_sev = tidy_post_CYD_sev %>%
   filter(grepl("lambda", variable)) %>%
-  filter(mean == max(mean) |
-           mean == min(mean)) %>%
   mutate_if(is.numeric, formatC, format = "e", digits = 2)
 
 
@@ -127,9 +123,11 @@ tidy_post_TAK = posterior_TAK %>%
 # only present min and max FOI and present in scientific notation 
 lambda_post_TAK = tidy_post_TAK %>%
   filter(grepl("lambda", variable)) %>%
-  filter(mean == max(mean) |
-           mean == min(mean)) %>%
-  mutate_if(is.numeric, formatC, format = "e", digits = 2)
+  mutate_if(is.numeric, formatC, format = "e", digits = 2) %>% 
+  unite("X", mean:q5, sep = " (") %>%  
+  unite("X", X:q95, sep = " to ") %>% 
+  mutate(X = paste0(X, ")")) %>% 
+  separate(variable, into = c("variable", NA, "dep", "dep2")) 
 
 tidy_post_TAK %>%
   filter(grepl("lambda", variable)) %>% 
@@ -145,12 +143,12 @@ out_TAK = tidy_post_TAK %>%
   mutate_if(is.numeric, round, 2) %>%  
   mutate_if(is.numeric, formatC, 2, format="f") %>%  
   mutate_if(is.numeric, as.factor) %>% 
-  bind_rows(lambda_post_TAK) %>% 
   unite("X", mean:q5, sep = " (") %>%  
   unite("X", X:q95, sep = " to ") %>% 
   mutate(X = paste0(X, ")")) %>% 
-  separate(variable, into = c("variable", "dep", "dep2")) 
-
+  separate(variable, into = c("variable", "dep", "dep2")) %>% 
+  bind_rows(lambda_post_TAK) 
+  
 
 write.csv(out_TAK, "TAK/output/M2/posterior_formatted.csv")  
 

@@ -4,10 +4,20 @@ library(tidyverse)
 source("compare_vaccines/R/plotting_functions.R")
 
 # colours 
-mycols = c( "#FFCC99", "#9999FF")
+cols = c("#67A9CF", "#C51B8A", "#99CC99", "#FFCC99")
+
+theme_set(
+  theme_bw() +
+    theme(
+      text = element_text(size = 12),
+      legend.title = element_blank(),
+      plot.title = element_text(hjust = 0.5),
+      legend.spacing.y = unit(0, "pt"),
+      legend.margin = margin(0, 0, 0, 0)))
+
 
 # files 
-TAK_file = "TAK/output/M2/VE.RDS"
+TAK_file = "TAK/output/M32/VE.RDS"
 CYD_file = "CYD/output/M12/VE.RDS"
 
 set.seed(123)
@@ -41,20 +51,17 @@ plot_ve_over_time = comb_VE %>%
   labs(x = "Month", y = "Vaccine efficacy (%)") +
   geom_hline(yintercept = 0, linetype = "dashed",color = "black", linewidth=1) +
   facet_grid(serostatus + outcome ~ serotype, scales = "free") + 
-  theme_light() + 
-  theme(plot.title = element_text(hjust = 0.5), legend.title = element_blank(),
-        legend.position = "top")+
-  scale_color_manual(values = mycols) +
-  scale_fill_manual(values = mycols)
+  theme(legend.position = "top")+
+  scale_color_manual(values = cols) +
+  scale_fill_manual(values = cols)
 
 
 ggsave(
   plot = plot_ve_over_time,
   filename = "compare_vaccines/output/VE_overtime.jpg",
-  height = 30,
-  width = 30,
+  height = 18,
+  width = 18,
   units = "cm",
-  dpi = 300,
-  scale = 0.6
+  dpi = 300
 )
 

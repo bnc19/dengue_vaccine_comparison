@@ -9,6 +9,15 @@ n_param = c(37,40,34,34,35,
             32,34,34,34,31,
             34,34,31)
 
+theme_set(
+  theme_bw() +
+    theme(
+      text = element_text(size = 12),
+      legend.title = element_blank(),
+      plot.title = element_text(hjust = 0.5),
+      legend.spacing.y = unit(0, "pt"),
+      legend.margin = margin(0, 0, 0, 0)))
+
 # read waic
 index_files = which(grepl("M", list.files(path = "CYD/output/")))
 source_files = paste0("CYD/output/", list.files(path = "CYD/output/")[index_files], "/WAIC.RDS")
@@ -131,7 +140,7 @@ p1 = df %>%
                               'tau'   = expression(tau),
                               "beta" = expression(beta),
                               "delta" = expression(delta))) +
-  ylab("Model")
+  xlab("Model") + ylab("Parameters")
 
 
 # plot log -likelihood 
@@ -139,7 +148,7 @@ p2 = df %>%
   ggplot(aes(x = model-0.5, y = mean)) +
   geom_point(aes(color=color, size = color)) + geom_line() +
   geom_ribbon(aes(ymin = q5, ymax = q95), alpha =0.2) + 
-  scale_x_continuous(limits = c(0,13), breaks = 1:13) + ylab("Log-likelihood") +
+  scale_x_continuous(limits = c(0,13), breaks = 1:13) + ylab("\nLog-likelihood") +
   xlab(" ")  + theme_bw() +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
@@ -167,7 +176,7 @@ p3 = df %>%
 p4 =df %>% 
   ggplot(aes(x = model-0.5, y = elpd_diff)) + # - 0.5 so aligns with other plots 
   geom_point(aes(color=color, size = color)) + geom_line() +
-  theme_bw() + ylab(paste("Difference in \nELPD compared \nto model", best_model)) +
+  theme_bw() + ylab(paste("ELPD \ncompared to M", best_model)) +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
   scale_x_continuous(limits = c(0,13), breaks = 1:13) +
@@ -178,11 +187,12 @@ p4 =df %>%
 
 g1 = cowplot::plot_grid(p2, NULL, p3, NULL,p4, NULL, p1, ncol=1, 
                         rel_heights = c(1,-.4,1,-.4,1,-.4, 1.8), 
+                        labels = c("a", "", "b", "", "c", "", "d"),
                         axis = "tblr", align = "hv")
 
 
 ggsave(g1, file = "CYD/output/figures/model_variants_C.jpg",
-       height = 30, width = 35, units="cm", scale = 0.7)
+       height = 24, width = 18, units="cm")
 
 
 ################################################################################

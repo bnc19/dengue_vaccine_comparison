@@ -244,3 +244,28 @@ run_CYD_model (
   cases =  readRDS("CYD/data/processed/cases_stan_format.RDS"),
   mu =  read.csv("CYD/data/processed/mu.csv")
 )
+
+
+# SA 
+  
+#  SA1 - M12 but end_time = 60 (minimum)
+  run_CYD_model (
+    end_time= 60,
+    mono_lc_SN = 1,
+    L_K = 1,
+    tau_K = 0,
+    mono_lc_MU = 2,
+    include_beta = 0,
+    delta_KJ = 2,
+    include_pK2 = 0,
+    MU_test_SN = 1,
+    folder = "SA1",
+    n_it = n_it,
+    adapt_delta = 0.8,
+    stan_model = "CYD_model.stan",
+    baseline_SP = read.csv("CYD/data/processed/baseline_SP.csv"),
+    cases =  readRDS("CYD/data/processed/cases_stan_format.RDS"),
+    mu =  read.csv("CYD/data/processed/mu.csv"),
+    BF = T
+  )
+  

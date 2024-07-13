@@ -8,8 +8,18 @@ source("CYD/R/factor_data.R")
 
 # colours 
 age_fill = scales::brewer_pal(palette = "Blues")(4)[c(2,4)]
-serotype_fill = c(scales::brewer_pal(palette = "RdPu")(6)[2:5], "#CCCCCC") 
-trial_fill = scales::brewer_pal(palette = "PuBuGn")(3)[2:3]
+serotype_fill = c("#BDC9E1", "#D55E00", "#CC79A7", "#016C59", "#111111")
+trial_fill = c("#C51B8A", "#99CC99")
+
+theme_set(
+  theme_bw() +
+    theme(
+      text = element_text(size = 12),
+      legend.title = element_blank(),
+      plot.title = element_text(hjust = 0.5),
+      legend.spacing.y = unit(0, "pt"),
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      legend.margin = margin(0, 0, 0, 0)))
 
 # read in titres 
 raw_titres = read_excel("CYD/data/raw/titres.xlsx")
@@ -161,17 +171,6 @@ min(original - censored)
 
 # plot case data ---------------------------------------------------------------
 
-
-theme_set(
-  theme_light() +
-    theme(
-      text = element_text(size = 16),
-      legend.title = element_blank(),
-      plot.title = element_text(hjust = 0.5),
-      legend.spacing.y = unit(0, "pt"),
-      legend.margin = margin(0, 0, 0, 0)
-    ))
-
 # Ho BVJD 
 Ho_BVJD = cases_final %>% 
   filter(outcome == "Ho" & serotype == "all") 
@@ -183,7 +182,7 @@ Ho_BVJD_plot = Ho_BVJD %>%
   scale_y_continuous(limits = c(0,80), breaks = seq(0,80,20)) +
   scale_fill_manual(values = age_fill) +
   facet_grid(serostatus~arm) +
-  theme(legend.position = c(0.1,0.8))
+  theme(legend.position = "none")
 
 # Ho BVKJ
 Ho_BVKJ = cases_final %>% 
@@ -209,7 +208,7 @@ Sy_BVJ_plot  = Sy_BVJ %>%
   scale_y_continuous(limits = c(0,280), breaks = seq(0,280,50)) +
   scale_fill_manual(values = age_fill) +
   facet_grid(~arm) +
-  theme(legend.position = "none")
+  theme(legend.position = c(0.84,0.84))
 
 # Sy VK 
 Sy_VK = cases_final %>% 
@@ -221,7 +220,7 @@ Sy_VK_plot = Sy_VK %>%
   ylab(" ") + xlab("Serotype") +
   scale_y_continuous(limits = c(0,250), breaks = seq(0,250,50)) +
   scale_fill_manual(values = trial_fill) +
-  theme(legend.position = c(0.9,0.8))
+  theme(legend.position = c(0.85,0.87))
 
 # Se VJD 
 Se_VJD = cases_final %>% 
@@ -232,7 +231,6 @@ Se_VJD_plot = Se_VJD %>%
   geom_bar(aes(fill = arm), position = "stack", stat = "identity") +
   facet_grid(~ age) +
   ylab("Severe cases") + xlab("Month") +
-  scale_y_continuous(limits = c(0,10), breaks = seq(0,10,2)) +
   scale_fill_manual(values = trial_fill) +
   theme(legend.position = "none")
 
@@ -242,26 +240,26 @@ Se_BVKJ = cases_final %>%
   filter(outcome == "Se", time == "all") 
 
 Se_BVKJ_plot = Se_BVKJ %>% 
-  ggplot(aes(x = serostatus, y = Y)) +
-  geom_bar(aes(fill = serotype), position = "stack", stat = "identity") +
-  facet_grid(arm ~ age) +
-  ylab(" ") + xlab("Month") +
-  scale_y_continuous(limits = c(0,60), breaks = seq(0,60,10)) +
-  scale_fill_manual(values = serotype_fill) +
-  theme(legend.position = c(0.1,0.8))
+  ggplot(aes(x = serotype, y = Y)) +
+  geom_bar(aes(fill = age), position = "stack", stat = "identity") +
+  facet_grid(arm ~ serostatus) +
+  ylab(" ") + xlab("Serotype") +
+  scale_y_continuous(limits = c(0,32), breaks = seq(0,30,5)) +
+  scale_fill_manual(values = age_fill) +
+  theme(legend.position = c("none"))
 
 
-grid_plot_data = plot_grid(Ho_BVJD_plot,
-                           Ho_BVKJ_plot,
-                           Sy_BVJ_plot,
+grid_plot_data = plot_grid(Sy_BVJ_plot,
                            Sy_VK_plot, 
+                           Ho_BVJD_plot,
+                           Ho_BVKJ_plot,
                            Se_VJD_plot,
                            Se_BVKJ_plot,
                            ncol = 2, 
                            labels = c("a", "b", "c", "d", "e", "f"))
 
 ggsave(grid_plot_data, file = "CYD/output/figures/case_data.jpg",
-       height = 50, width = 50, scale =0.68, unit = "cm" )
+       height = 22, width = 18,  unit = "cm" )
 
 # Save factorised data in list for Stan format ---------------------------------
 out = list(

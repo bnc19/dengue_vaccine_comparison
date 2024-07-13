@@ -21,21 +21,22 @@ AR = readRDS(paste0(path, "AR.RDS"))
 VCD =  readRDS("CYD/data/processed/cases_stan_format.RDS")
 
 
+# colours 
+age_fill = scales::brewer_pal(palette = "Blues")(4)[c(2,4)]
+serotype_fill = c("#BDC9E1", "#D55E00", "#CC79A7", "#016C59", "#111111")
+trial_fill = c("#C51B8A", "#99CC99")
+cols = c("#BCBDDC", "#FC9272")
+
+
 theme_set(
-  theme_light() +
+  theme_bw() +
     theme(
-      text = element_text(size = 16),
-      legend.position = c(0.04,0.74),
+      text = element_text(size = 12),
       legend.title = element_blank(),
       plot.title = element_text(hjust = 0.5),
       legend.spacing.y = unit(0, "pt"),
-      legend.margin = margin(0, 0, 0, 0)
-    ))
+      legend.margin = margin(0, 0, 0, 0)))
 
-age_fill = scales::brewer_pal(palette = "Blues")(4)[c(2,4)]
-serotype_fill = c(scales::brewer_pal(palette = "RdPu")(6)[2:5], "#CCCCCC") 
-trial_fill = scales::brewer_pal(palette = "PuBuGn")(3)[2:3]
-cols = c("#BCBDDC", "#FC9272")
 
 
 # add aggregated populations to data and calculate attack rates
@@ -194,11 +195,10 @@ AR_grid = cowplot::plot_grid(
 ggsave(
   plot = AR_grid,
   filename =  "CYD/output/figures/severe_fit_C.png",
-  height = 50,
-  width = 40,
+  height = 24,
+  width = 18,
   units = "cm",
-  dpi = 600,
-  scale = 0.9
+  dpi = 600
 )
 
 # plot VE  ---------------------------------------------------------------------
@@ -241,55 +241,3 @@ ggsave(
   scale = 0.9
 )
 
-
-# plot VE severe vs. VE hosp ---------------------------------------------------
-VE_hosp = VE_model_HOSP %>%  
-  filter(group == "VE_BKRT") %>% 
-  separate(name, into = c("serostatus", "serotype", "outcome", "month")) %>%
-  mutate(
-    outcome = factor(outcome, labels = c("symptomatic", "hospitalised")), 
-    serotype = factor(serotype, 
-                      labels = c("DENV1", "DENV2", "DENV3", "DENV4")),
-    month = as.numeric(month),
-    serostatus = factor(serostatus, 
-                        labels = c("seronegative", "monotypic", "multitypic"))) %>% 
-  filter(outcome == "hospitalised")
-
-hosp_vs_sev = VE_severe %>%
-  filter(outcome == "severe") %>% 
-  bind_rows(VE_hosp) %>% 
-  pivot_wider(names_from = outcome, values_from = lower:upper) %>% 
-  ggplot(aes(x = mean_severe, y = mean_hospitalised)) +
-  geom_line(aes(color = serotype), linewidth = 2) +
-  #geom_smooth(aes(color = serotype), method = "lm") + 
-  facet_wrap(~ serostatus, scales = "free") +
-  geom_abline() + 
-  scale_color_manual(values = serotype_fill) + 
-  labs(y = "Vaccine efficacy \nagainst hospitalsiation", 
-       x = "Vaccine efficacy \nagainst severe disease") + 
-  theme(legend.position = c(0.24,0.21)) + 
-  stat_cor(method="pearson") +
-  ggh4x::facetted_pos_scales(
-    x = list(
-      scale_x_continuous(limits = c(-300, 100)),
-      scale_x_continuous(limits = c(50, 100)),
-      scale_x_continuous(limits = c(90, 100))
-    ),
-    y = list(
-      scale_y_continuous(limits = c(-300, 100)),
-      scale_y_continuous(limits = c(50, 100)),
-      scale_y_continuous(limits = c(90, 100))
-    )
-  )
-
-ggsave(
-  plot = hosp_vs_sev,
-  filename =  "CYD/output/figures/hosp_vs_sev_C.png",
-  height = 10,
-  width = 30,
-  units = "cm",
-  dpi = 600,
-  scale = 0.9
-)
-
-  

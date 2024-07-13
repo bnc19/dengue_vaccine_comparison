@@ -6,9 +6,22 @@ library(tidyverse)
 n = 500
 
 # colours 
-serotype_fill = c(scales::brewer_pal(palette = "RdPu")(6)[2:5], "#CCCCCC") 
+age_fill = scales::brewer_pal(palette = "Blues")(4)[c(2:4)]
+serotype_fill = c("#BDC9E1", "#D55E00", "#CC79A7", "#016C59")
+trial_fill = c("#C51B8A", "#99CC99")
 
-TAK_file = "TAK/output/M2/VE.RDS"
+theme_set(
+  theme_bw() +
+    theme(
+      text = element_text(size = 12),
+      legend.title = element_blank(),
+      plot.title = element_text(hjust = 0.5),
+      legend.spacing.y = unit(0, "pt"),
+      
+      legend.margin = margin(0, 0, 0, 0)))
+
+
+TAK_file = "TAK/output/M32/VE.RDS"
 CYD_file = "CYD/output/M12/VE.RDS"
 BUT_file = "BUT/output/M7/VE.RDS"
 
@@ -37,32 +50,24 @@ year2_comp = tidy_TAK_VE %>%
   bind_rows(tidy_BUT_VE, tidy_CYD_VE) %>%  
   ggplot(aes(x = Vaccine, y= mean, group = Serotype)) +
   geom_point(aes(color = Serotype),
-             position = position_dodge(0.4), size = 0.6) +
+             position = position_dodge(0.4), size = 1) +
   geom_errorbar(aes(ymin = lower, ymax = upper, color = Serotype),
                 position = position_dodge(0.4), width = 0.5) +
   facet_wrap(~Serostatus, ncol =3) + 
   geom_hline(yintercept = 0, linetype = 2) +
-  theme_bw() +
-  theme(
-    text = element_text(size = 10),
-    legend.position = c(0.94,0.25),
-    legend.title = element_blank(),
-    plot.title = element_text(hjust = 0.5),
-    legend.spacing.y = unit(0, "pt"),
-    legend.margin = margin(0, 0, 0, 0),
-    legend.key.size = unit(0.2, "cm")
-  )  + ylab("Vaccine efficacy (%)") +
+  theme(legend.position = c(0.92,0.3),
+        axis.text.x = element_text(angle = 25, hjust = 1)) +
+  ylab("Vaccine efficacy (%)") +
   ggtitle("Cumulative vaccine efficacy across months 1 to 24") +
   scale_color_manual(values = serotype_fill)
 
 ggsave(
   plot = year2_comp,
   filename = "compare_vaccines/output/year_2_VE_comp.jpg",
-  height = 10,
-  width = 30,
+  height = 8,
+  width = 18,
   units = "cm",
-  dpi = 600,
-  scale = 0.6
+  dpi = 600
 )
 
 # summarise mean and 95% CrI VE by outcome, seerostatus, serotype upto 4.5 yrs
@@ -81,25 +86,17 @@ year_4.5_comp = tidy_TAK_VE_4.5 %>%
                 position = position_dodge(0.4), width = 0.5) +
   facet_grid(Outcome~Serostatus) + 
   geom_hline(yintercept = 0, linetype = 2) +
-  theme_bw() +
-  theme(
-    text = element_text(size = 10),
-    legend.position ="top",
-    legend.title = element_blank(),
-    plot.title = element_text(hjust = 0.5),
-    legend.spacing.y = unit(0, "pt"),
-    legend.margin = margin(0, 0, 0, 0)
-  )  + ylab("Vaccine efficacy (%)") +
+  theme( legend.position ="top"  )  + 
+  ylab("Vaccine efficacy (%)") +
   ggtitle("Cumulative vaccine efficacy across months 1 to 54") +
   scale_color_manual(values = serotype_fill)
 
 ggsave(
   plot = year_4.5_comp,
   filename = "compare_vaccines/output/year_4.5_comp.jpg",
-  height = 20,
-  width = 30,
+  height = 10,
+  width = 18,
   units = "cm",
-  dpi = 600,
-  scale = 0.6
+  dpi = 600
 )
 

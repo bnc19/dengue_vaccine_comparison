@@ -9,20 +9,19 @@ library(wesanderson)
 library(readxl)
 library(cowplot)
 
+# colours 
+age_fill = scales::brewer_pal(palette = "Blues")(4)[c(2:4)]
+serotype_fill = c("#BDC9E1", "#D55E00", "#CC79A7", "#016C59")
+trial_fill = c("#C51B8A", "#99CC99")
+
 theme_set(
-  theme_light() +
+  theme_bw() +
     theme(
-      text = element_text(size = 16),
-      legend.position ="top",
+      text = element_text(size = 12),
       legend.title = element_blank(),
       plot.title = element_text(hjust = 0.5),
       legend.spacing.y = unit(0, "pt"),
-      legend.margin = margin(0, 0, 0, 0)
-    ))
-
-# colours
-age_fill = scales::brewer_pal(palette = "Blues")(4)[2:4]
-serotype_fill = c(scales::brewer_pal(palette = "RdPu")(6)[2:5], "#CCCCCC") 
+      legend.margin = margin(0, 0, 0, 0)))
 
 
 # source files 
@@ -63,13 +62,11 @@ AR_plot_BVK = AR_model %>%
                     group = interaction(type, serotype),
       linetype = type, color = serotype),
     position = position_dodge(width =  0.5),width =  0.4,linewidth = 1) +
-  labs(x = " ", y = "Symptomatic \nattack rate (%)") +
-  facet_wrap(~ serostatus) + theme_light() +
-  theme(legend.position =c(0.87,0.73),
-        text = element_text(size = 18),
-        legend.title = element_blank(),
-        legend.spacing.y = unit(0, "pt"),
-        legend.margin = margin(0, 0, 0, 0)) +
+  labs(x = "Trial arm", y = "Symptomatic \nattack rate (%)") +
+  facet_wrap(~ serostatus) + 
+  theme(legend.position =c(0.86,0.82)) +
+  guides(color = guide_legend(ncol = 2),
+         shape = guide_legend(ncol = 2)) +
   scale_color_manual(values = serotype_fill)
   
 
@@ -89,13 +86,26 @@ AR_plot_BVJ = AR_model %>%
                     group = interaction(type, age),
       linetype = type, color = age),
     position = position_dodge(width =  0.5), width =  0.4, linewidth = 1) +
-  labs(x = " ", y = " ") + # DELETE Y LAB IF COMBINED AR AND VE FIGURE 
+  labs(x = "Trial arm", y = "Symptomatic \nattack rate (%)") + 
   guides(shape = "none",linetype = "none") +
-  theme(legend.position =c(0.85,0.8),
-        text = element_text(size = 18),
-        legend.title = element_blank()) +
+  theme(legend.position =c(0.93,0.75)) +
   facet_wrap(~ serostatus)  + 
   scale_color_manual(values = age_fill)
+
+
+g2 = plot_grid(AR_plot_BVK,  AR_plot_BVJ,
+               labels = c("a", "b"), ncol = 1,
+               rel_heights  = c(1.1,1))
+
+ggsave(
+  plot = g2,
+  filename =  "BUT/output/figures/main_fit_B.png",
+  height = 12,
+  width = 18,
+  units = "cm",
+  dpi = 600
+)
+
 
 
 # plot VE 
@@ -116,39 +126,18 @@ VE_plot =  VE_model %>%
   geom_ribbon(aes(ymin = lower, ymax = upper, fill = Serotype), alpha = 0.4) +
   labs(x = "Month", y = "Vaccine efficacy (%)") +
   scale_x_continuous(breaks = seq(0, 24,6)) +
-  facet_wrap(~serostatus) + theme_light() + 
-  theme(
-        # legend.position = "none", # INCLUDE IS PLOTTING AR AND VE TOGETHER 
-        legend.position = c(0.87,0.11), 
-        text = element_text(size = 18),
-        legend.title = element_blank()) +
+  facet_wrap(~Serostatus) +
+  theme(legend.position = c(0.07,0.17)) +
   scale_y_continuous(limits = c(0,100)) +
   scale_color_manual(values = serotype_fill) +
   scale_fill_manual(values = serotype_fill)
 
 
-# plot sep 
-
-g2 = plot_grid(AR_plot_BVK,  AR_plot_BVJ,
-               labels = c("a", "b"),
-               rel_widths = c(1.1,1))
-
-ggsave(
-  plot = g2,
-  filename =  "BUT/output/figures/main_fit_B.png",
-  height = 9,
-  width = 29,
-  units = "cm",
-  dpi = 600,
-  scale = 0.9
-)
-
 ggsave(
   plot = VE_plot,
   filename =  "BUT/output/figures/ve_B.png",
-  height = 15,
-  width = 30,
+  height = 6,
+  width = 18,
   units = "cm",
-  dpi = 600,
-  scale = 0.8
+  dpi = 600
 )
