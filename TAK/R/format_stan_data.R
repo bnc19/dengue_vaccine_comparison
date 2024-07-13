@@ -1,6 +1,7 @@
 format_TAK_stan_data = function(baseline_SP,
                             VCD,
                             hosp,
+                            infections, 
                             mu,
                             B,
                             K,
@@ -19,6 +20,7 @@ format_TAK_stan_data = function(baseline_SP,
                             rho_K,
                             L_K,
                             w_CK,
+                            chi_C,
                             alpha_CK,
                             tau_K,
                             L_sd,
@@ -149,6 +151,54 @@ N_VCD_BV5 = VCD %>%
 
 N_VCD_BV5_m  = array(N_VCD_BV5$Y, dim = c(2, 2))
 
+
+
+# Asymp data -------------------------------------------------------------------
+asymp = infections %>% 
+  filter(Serostatus!= "both") %>% 
+  mutate(serostatus = factor(Serostatus,
+                             levels = c("SN", "SP", "both"),
+                             labels = c("seronegative", "seropositive", "both")),
+         trial = factor(Arm, levels = c("Placebo", "TAK","both"), 
+                        labels = c("placebo", "vaccine", "both")),
+         year = Month) %>% 
+  select(-Serostatus, -Arm, -Outcome, -Month) 
+
+# multinomial 
+N_ASYMP_BV3 = asymp %>%  
+  arrange(year, serostatus, trial)
+
+N_ASYMP_BV3_m = array(N_ASYMP_BV3$Y, dim = c(B * V, 3))
+
+# population 
+Ipop_BV3 = asymp %>% 
+  arrange(year, trial , serostatus)
+
+Ipop_BV3_m = array(Ipop_BV3$N, dim = c(B, V, 3))
+
+# binomial 
+ASYMP_D = asymp %>% 
+  group_by(year) %>%  
+  summarise(Y = sum(Y))
+
+# total inf
+symp = filter(infections, Serostatus == "both") %>% 
+  mutate(serostatus = factor(Serostatus,
+                             levels = c("SN", "SP", "both"),
+                             labels = c("seronegative", "seropositive", "both")),
+         trial = factor(Arm, levels = c("Placebo", "TAK","both"), 
+                        labels = c("placebo", "vaccine", "both")),
+         year = Month) %>% 
+  select(-Serostatus, -Arm, -Outcome, -Month) 
+
+ asymp %>%  
+  group_by(year, trial) %>% 
+  summarise(Y=sum(Y),
+            N = sum(N)) %>% 
+  bind_rows(symp)
+
+
+
 # data -------------------------------------------------------------------------
 
 stan_data = list(
@@ -169,6 +219,7 @@ stan_data = list(
   mono_lc_SN = mono_lc_SN,
   mono_lc_MU = mono_lc_MU,
   rho_K = rho_K,
+  chi_C = chi_C,
   L_K = L_K,
   w_CK = w_CK,
   alpha_CK = alpha_CK,
@@ -192,7 +243,11 @@ stan_data = list(
   HOSP_D = as.numeric(hosp_D$Y),
   HOSP_KJ2 = hosp_KJ2_m,
   VCD_KJ2 = VCD_KJ2_m,
-  N_VCD_BV5 = N_VCD_BV5_m
+  N_VCD_BV5 = N_VCD_BV5_m,
+  Ipop_BV3 = Ipop_BV3_m,
+  ASYMP_BV3 = N_ASYMP_BV3_m,
+  ASYMP_D = as.numeric(ASYMP_D$Y)
+  
 )
   return(stan_data)
 }

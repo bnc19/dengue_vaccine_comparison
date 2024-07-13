@@ -40,6 +40,7 @@ run_TAK_model = function(n_it = 10000,
                      mono_lc_SN = 0,
                      mono_lc_MU = 0,
                      rho_K = 0,
+                     chi_C = 0,
                      L_K = 0,
                      w_CK = 0,
                      alpha_CK = 0,
@@ -55,6 +56,7 @@ run_TAK_model = function(n_it = 10000,
                      baseline_SP,
                      VCD,
                      hosp,
+                     infections,
                      titres = NULL,
                      metric = c("VCD_BVKD",
                                 "VCD_BVJA",
@@ -85,12 +87,14 @@ dir.create(file_path)
 # data -----------------------------------------------------------------------
 hosp = factor_TAK_VCD(hosp)
 VCD = factor_TAK_VCD(VCD)
+
 # fit Stan model -------------------------------------------------------------
 
 list_data = format_TAK_stan_data(
   baseline_SP = baseline_SP,
   VCD = VCD,
   hosp = hosp,
+  infections = infections,
   B = B,
   R = R,
   K = K,
@@ -108,6 +112,7 @@ list_data = format_TAK_stan_data(
   w_CK = w_CK,
   alpha_CK = alpha_CK,
   tau_K = tau_K,
+  chi_C = chi_C, 
   L_sd = L_sd,
   L_mean = L_mean,
   lower_bound_L = lower_bound_L,
