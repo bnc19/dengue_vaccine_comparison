@@ -316,7 +316,7 @@ p1_sev = df_sev %>%
                               "beta" = expression(beta),
                               "epsilon" = expression(epsilon),
                               "delta" = expression(delta))) +
-  ylab("Model")
+  ylab("Parameters") + xlab("Model")
 
 
 # plot log -likelihood 
@@ -324,7 +324,7 @@ p2_sev = df_sev %>%
   ggplot(aes(x = model-0.5, y = mean)) +
   geom_point(aes(color=color, size = color)) + geom_line() +
   geom_ribbon(aes(ymin = q5, ymax = q95), alpha =0.2) + 
-  scale_x_continuous(limits = c(0,16), breaks = 1:16) + ylab("Log-likelihood") +
+  scale_x_continuous(limits = c(0,16), breaks = 1:16) + ylab("\nLog-likelihood") +
   xlab(" ")  + theme_bw() +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
@@ -352,7 +352,7 @@ p3_sev = df_sev %>%
 p4_sev = df_sev %>% 
   ggplot(aes(x = model-0.5, y = elpd_diff)) + # - 0.5 so aligns with other plots 
   geom_point(aes(color=color, size = color)) + geom_line() +
-  theme_bw() + ylab(paste("Difference  \nin ELPD compared \nto model", best_model_sev)) +
+  theme_bw() + ylab(paste0("ELPD \ncompared to M", best_model_sev)) +
   scale_color_manual(values=c("#000000", "#CC0033"))+
   scale_size_manual(values=c(1,2.5)) +
   scale_x_continuous(limits = c(0,16), breaks = 1:16) +
@@ -363,9 +363,15 @@ p4_sev = df_sev %>%
 
 g1_sev = cowplot::plot_grid(p2_sev, NULL, p3_sev, NULL,p4_sev, NULL, p1_sev, ncol=1, 
                         rel_heights = c(1,-0.3,1,-0.3,1,-0.3, 1.8), 
+                        labels = c("a", "", "b", "", "c", "", "d"),
                         axis = "tblr", align = "hv")
 
 
-ggsave(g1_sev, file = "CYD/output/figures/severe_model_variants_C.jpg",
-       height = 25, width = 30, units="cm", scale = 0.9)
+ggsave(
+  g1_sev,
+  file = "CYD/output/figures/severe_model_variants_C.jpg",
+  height = 21,
+  width = 18,
+  units = "cm"
+)
 
