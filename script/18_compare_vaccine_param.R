@@ -14,7 +14,7 @@
   
   model_dep = data.frame(
   vaccine = c("Dengvaxia", "Qdenga", "Butantan-DV"), 
-  L = c("serotype", "global", NA),
+  L = c("serostatus & serotype", "serostatus", NA),
   delta = c("age", "serotype", NA),
   n50 = c("serostatus & serotype_MO\nMU", 
          "serostatus & serotype_MO\nMU",
@@ -47,15 +47,15 @@ df = model_dep %>%
         "not included"
       ),
       labels = c(
-        "serotype-specific",
-        "age group-specific",
-        "serostatus-specific",
-        "serostatus & serotype-specific",
+        "serotype",
+        "age group",
+        "serostatus",
+        "serostatus & serotype",
         "global",
         "not included"  
       ))) %>% 
   mutate(group = 
-           ifelse(Parameter %in% c("L", "tau"), "Vaccine efficacy \n(SN enhancement)",
+           ifelse(Parameter %in% c("L", "tau"), "Vaccine efficacy \n(enhancement)",
            ifelse(Parameter %in% c("n50", "beta", "alpha", "w"), "Vaccine efficacy \n(titres)",                  
            ifelse(Parameter %in% c("p", "eta"), "Dengue exposure",
            ifelse(Parameter %in% c("rho", "delta"), "Disease risk",NA))))) %>% 

@@ -65,8 +65,8 @@ rownames(d) = models
 colnames(d) = parameters
 
 # L
-d[ ,1] = "serostatus & serotype"
-d[11:12,1] = "serotype"
+d[ ,1] = "serostatus"
+d[11:12,1] = "serostatus & serotype"
 
 # delta
 d[ ,2] = "serotype"

@@ -88,7 +88,7 @@ AR_plot_BVJ = AR_model %>%
     position = position_dodge(width =  0.5), width =  0.4, linewidth = 1) +
   labs(x = "Trial arm", y = "Symptomatic \nattack rate (%)") + 
   guides(shape = "none",linetype = "none") +
-  theme(legend.position =c(0.93,0.75)) +
+  theme(legend.position =c(0.92,0.75)) +
   facet_wrap(~ serostatus)  + 
   scale_color_manual(values = age_fill)
 

@@ -25,7 +25,7 @@ VCD =  readRDS("CYD/data/processed/cases_stan_format.RDS")
 age_fill = scales::brewer_pal(palette = "Blues")(4)[c(2,4)]
 serotype_fill = c("#BDC9E1", "#D55E00", "#CC79A7", "#016C59", "#111111")
 trial_fill = c("#C51B8A", "#99CC99")
-cols = c("#BCBDDC", "#FC9272")
+cols = c("#67A9CF", "#C51B8A", "#99CC99", "#FFCC99")
 
 
 theme_set(
@@ -57,9 +57,9 @@ Sy_AR_plot_VK = AR_model %>%
   geom_errorbar(aes(ymin = lower, ymax = upper, group = interaction(type, serotype),
       linetype = type, color = serotype),
     position = position_dodge(width =  0.5), width =  0.4, linewidth = 1) +
-  labs(x = " ", y = "") +
+  labs(x = " ", y = "Symptomatic \nattack rate (%)") +
   scale_color_manual(values = serotype_fill) +
-  theme(legend.position = "none")
+  guides(shape = "none", linetype = "none")
 
 # plot symp attack rate by age, serostatus and trial arm -----------------------
 Sy_AR_plot_BVJ = AR_model %>%
@@ -77,8 +77,8 @@ Sy_AR_plot_BVJ = AR_model %>%
                     linetype = type, color = age),
                 position = position_dodge(width =  0.5), width =  0.4, linewidth = 1) +
   labs(x = " ", y = "Symptomatic \nattack rate (%)") +
-  scale_color_manual(values = age_fill) +
-  theme(legend.position = "none")
+  scale_color_manual(values = age_fill) 
+  
 
 # plot hosp attack rate by age, serostatus, serotype and trial arm -------------
 H_AR_plot_BVKJ = AR_model %>%
@@ -89,8 +89,7 @@ H_AR_plot_BVKJ = AR_model %>%
          serostatus = factor(serostatus, labels = c("seronegative", "seropositive")),
          age = factor(age, labels = c("2-8yrs", "9-16yrs"))) %>% 
   bind_rows(AR_data$Ho_BVKJ) %>%
-  unite(c(arm, serostatus), col = "x", sep = "\n") %>%
-  ggplot(aes(x = x, y = mean)) +
+  ggplot(aes(x = serostatus, y = mean)) +
   geom_point(aes(shape = type, color = serotype, group = interaction(type, serotype)),
              position = position_dodge(width = 0.5),size = 3) +
   geom_errorbar(aes(ymin = lower, ymax = upper, group = interaction(type, serotype),
@@ -98,8 +97,9 @@ H_AR_plot_BVKJ = AR_model %>%
                 position = position_dodge(width =  0.5), width =  0.4, linewidth = 1) +
   labs(x = " ", y = "Hospitalisation \nattack rate (%)") +
   scale_color_manual(values = serotype_fill) +
-  theme(legend.position = "none") +
-  facet_wrap(~ age) 
+  facet_grid(arm~ age) +
+  guides(shape = "none", linetype = "none")
+
 
 # plot hosp attack rate by age, serostatus, trial arm and time -----------------
 H_AR_plot_BVJD =  AR_model %>%
@@ -118,8 +118,7 @@ H_AR_plot_BVJD =  AR_model %>%
                 position = position_dodge(width =  0.5), width =  0.4, linewidth = 1) +
   facet_grid(serostatus ~ arm) +
   labs(x = "Month", y = "Hospitalisation \nattack rate (%)") +
-  scale_color_manual(values = age_fill) +
-  theme(legend.position = "none")  
+  scale_color_manual(values = age_fill) 
 
 # plot severe attack rates -----------------------------------------------------
 
@@ -154,8 +153,8 @@ Se_AR_BVKJ = AR_model %>%
                 position = position_dodge(width =  0.5), width =  0.4, linewidth = 1) +
   labs(x = " ", y = "Severe \nattack rate (%)") +
   scale_color_manual(values = serotype_fill) +
-  guides(shape = "none", linetype = "none")  +
-facet_grid(age ~ arm)
+facet_grid(age ~ arm)  +
+  guides(shape = "none", linetype = "none")
 
 # plot severe attack rate by age, arm, time in SN   ----------------------------
 Se_AR_VJD = AR_model %>%
@@ -166,7 +165,7 @@ Se_AR_VJD = AR_model %>%
     arm = factor(arm, labels = c("placebo", "vaccine")),
     age = factor(age, labels = c("2-8yrs", "9-16yrs"))
   ) %>%  
-  bind_rows(AR_data$Se_VJD) %>%  
+  bind_rows(AR_data$Se_VJD) %>% 
   ggplot(aes(x = time, y = mean)) +
   geom_point(aes(shape = type, color = age, group = interaction(type, age)),
              position = position_dodge(width = 0.5),size = 3) +
@@ -175,27 +174,50 @@ Se_AR_VJD = AR_model %>%
                 position = position_dodge(width =  0.5), width =  0.4, linewidth = 1) +
   labs(x = "Month", y = "Severe \nattack rate (%)") +
   facet_wrap(~ arm) +
-  scale_color_manual(values = age_fill)
+  scale_color_manual(values = age_fill) 
 
 # save AR plot -----------------------------------------------------------------
-AR_grid = cowplot::plot_grid(
-  Se_AR_VJD,  
-  Se_AR_BVKJ,
-  cowplot::plot_grid( 
+S_AR_grid = cowplot::plot_grid(
     Sy_AR_plot_BVJ,
-    Sy_AR_plot_VK, ncol =2,
-    labels = c("c", "d")), 
-  H_AR_plot_BVJD,
-  H_AR_plot_BVKJ,
-  ncol = 1,
-  rel_heights = c(1,1.3,1), 
-  labels = c("a", "b", " ", "e", "f")
+    Sy_AR_plot_VK, ncol =1,
+    rel_heights = c(1,1.5),
+    labels = c("a", "b"))
+
+
+H_AR_grid = cowplot::plot_grid(H_AR_plot_BVJD,
+             H_AR_plot_BVKJ,
+             ncol = 1,
+             labels = c("a", "b"))
+
+SE_AR_grid = cowplot::plot_grid(Se_AR_VJD,
+                                Se_AR_BVKJ,
+                                ncol = 1,
+                                rel_heights = c(1,1.5),
+                                labels = c("a", "b"))
+
+ggsave(
+  plot = S_AR_grid,
+  filename =  "CYD/output/figures/S_AR_grid.png",
+  height = 12,
+  width = 18,
+  units = "cm",
+  dpi = 600
 )
 
 ggsave(
-  plot = AR_grid,
-  filename =  "CYD/output/figures/severe_fit_C.png",
-  height = 24,
+  plot = H_AR_grid,
+  filename =  "CYD/output/figures/H_AR_grid.png",
+  height = 16,
+  width = 18,
+  units = "cm",
+  dpi = 600
+)
+
+
+ggsave(
+  plot = SE_AR_grid,
+  filename =  "CYD/output/figures/SE_AR_grid.png",
+  height = 12,
   width = 18,
   units = "cm",
   dpi = 600
@@ -223,10 +245,8 @@ ggplot(aes(x = month , y = mean)) +
   geom_ribbon(aes(ymin = lower, ymax = upper, fill = outcome), alpha = 0.4) +
   labs(x = "Month", y = "Vaccine efficacy (%)") +
   scale_x_continuous(breaks = seq(0, 60,12)) +
-  facet_grid(serostatus ~ age ~ serotype, scales = "free") + theme_light() + 
-  theme(legend.position = c(0.88,0.9),
-        text = element_text(size = 18),
-        legend.title = element_blank()) +
+  facet_grid(serostatus ~ age ~ serotype, scales = "free") +
+  theme(legend.position = c(0.88,0.9)) +
   geom_hline(yintercept=0, linetype="dashed",color = "black", linewidth=1) +
       scale_color_manual(values =  cols) +
   scale_fill_manual(values =  cols) 
@@ -234,10 +254,9 @@ ggplot(aes(x = month , y = mean)) +
 ggsave(
   plot = VE_plot,
   filename =  "CYD/output/figures/severe_VE_plot_C.png",
-  height = 30,
-  width = 40,
+  height = 17,
+  width = 18,
   units = "cm",
-  dpi = 600,
-  scale = 0.9
+  dpi = 600
 )
 
