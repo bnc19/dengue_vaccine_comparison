@@ -11,7 +11,7 @@ Instructions to download and install cmdStan can be found [here](https://mc-stan
 * *1.fit_all_trials.R*: Script to calibrate the stan model to the publicly available data of all three vaccines. The script is set up to run the final model (M21) first and all other model variants presented in the manuscript can be run  below. All model variants are run using the same stan model (final_model.stan) with different parameters turned on and off, using the flags. 
 * *2.plot_all_attack_rates.R*: Script to plot the final model fits of all three vaccines. Script outputs Fig.1.
 * *3.plot_efficacy.R* Script to plot 24 month VE for all vaccines aggregated over time. Script outputs Fig.2
-* *4.plot_efficacy_over_time* Script to plot VE of Dengvaxia and Qdenga up to 54 months. Script outputs Figs 3 and 4. 
+* *4.plot_efficacy_over_time* Script to plot VE of Dengvaxia and Qdenga up to 54 months. Script outputs Fig.3 and Fig.4. 
   
 ### Data
 
