@@ -1,4 +1,4 @@
-# Plot 2 year VE for all vaccines by serostatus and serotype (but not age)
+# Script to plot 24 month VE for all vaccines aggregated over time. Script outputs Fig.2
 rm(list = ls())
 
 source("R/plotting_functions.R")

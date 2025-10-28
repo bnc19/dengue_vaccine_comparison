@@ -1,4 +1,5 @@
-# Plot VE of Dengvaxia and Qdenga side by side
+# Script to plot VE of Dengvaxia and Qdenga up to 54 months. Script outputs Fig.3 and Fig.4. 
+
 rm(list = ls())
 library(tidyverse)
 source("R/plotting_functions.R")

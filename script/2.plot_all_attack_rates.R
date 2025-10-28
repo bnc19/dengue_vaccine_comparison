@@ -1,10 +1,10 @@
-# Script to plot the model fits of all three vaccines 
+# Script to plot the final model fits of all three vaccines. Script outputs Fig.1.
+
 rm(list = ls())
 
 # load functions 
 library(tidyverse)
 library(Hmisc)
-library(readxl)
 library(patchwork)
 library(grid)
 
