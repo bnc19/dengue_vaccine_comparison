@@ -1,6 +1,6 @@
 # Dengue vaccine comparison 
 
-This repository contains the code needed to reproduce the main results presented in the manuscript: Modelling the efficacy of Qdenga, Dengvaxia, and the Butantan-DV dengue vaccines: a comparative analysis and open questions<img width="468" height="127" alt="image" src="https://github.com/user-attachments/assets/94dde4da-bc13-4f40-a845-184127adabd8" />
+This repository contains the code needed to reproduce the main results presented in the manuscript: Modelling the efficacy of Qdenga, Dengvaxia, and the Butantan-DV dengue vaccines: a comparative analysis and open questions.
 .
 
 Instructions to download and install cmdStan can be found [here](https://mc-stan.org/users/interfaces/cmdstan). Instructions to download and install Rtools can be found [here](https://cran.r-project.org/bin/windows/Rtools/).
