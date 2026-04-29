@@ -1,3 +1,19 @@
+# ------------------------------------------------------------------------------
+# run_model_TR
+#
+# End-to-end wrapper for fitting the multi-trial Stan model. This function
+# preprocesses Qdenga, Dengvaxia, and Butantan-DV trial datasets, constructs
+# the combined Stan data list via functions located in "R/format_stan_data.R", 
+# compiles and runs MCMC sampling  with cmdstanr given the specified Stan model, 
+# "stan_model" and saves posterior summaries, derived quantities, and diagnostics. 
+# 
+# Saves posterior estimates and optionally evaluation metrics to file path given
+# in "folder" 
+#
+# Intended as a high-level execution pipeline for reproducible model fitting 
+# by switching parameters on and off using the model flags. 
+# ------------------------------------------------------------------------------
+
 run_model_TR = function(n_it = 10000,
                           adapt_delta = 0.8,
                           n_chains = 4,
@@ -10,7 +26,7 @@ run_model_TR = function(n_it = 10000,
                               ts = replicate(2, runif(3, 0, 12)),
                               lambda_D_Q = replicate(6, runif(4, 0, 0.02)),
                               lambda_D_De = runif(4, 0, 0.02),
-                              lambda_K_Bu = runif(2, 0, 0.02), 
+                              lambda_KD_Bu = replicate(2, runif(2, 0, 0.02)), 
                               p = replicate(3, runif(3, 0.1, 0.9)),
                               pK3 = replicate(4, runif(3, 0.1, 0.9)),
                               gamma = runif(1, 0.1, 0.9),
@@ -43,9 +59,10 @@ run_model_TR = function(n_it = 10000,
                           cases_Bu,
                           baseline_SP_Bu,
                           mu_Bu,
+                          VCD_years_Bu = c(24, 60),
                           VCD_years_De = c(13, 24, 36, 60),
                           start_time_Bu = 1,
-                          end_time_Bu = 24,
+                          end_time_Bu = 60,
                           start_time_De = 13,
                           end_time_De = 72,
                           B = 2,
@@ -58,13 +75,25 @@ run_model_TR = function(n_it = 10000,
                           J_Bu = 3,
                           C = 3,
                           HI = 12,
+                          metric = c("VCD_BVKD",
+                                   "VCD_BVJA",
+                                   "VCD_KJ2",
+                                   "HOSP_BVK4" ,
+                                   "HOSP_BVJA" ,
+                                   "HOSP_KJ2"),
+                          BF = F,
+                          diagnostics = F,
+                        
+                          # Model Flags 
                           share_alpha = 0, 
                           share_omega_kappa = 0, 
                           include_pK3 = 0,
                           include_eps = 0,
                           include_beta = c(0, 0, 0), # trial specific
+                          mono_lc = 0, 
                           mono_lc_SN = 0,
                           mono_lc_MU = 0,
+                          mono_lc_MO = 0,
                           rho_K = 0,
                           L_K = c(0,0,0),  # trial specific
                           delta_KJ = c(0,0,0),  # trial specific
@@ -77,15 +106,14 @@ run_model_TR = function(n_it = 10000,
                           L_mean = 0,
                           psi_J = 0,
                           enhancement = c(1,1,1),
-                          diagnostics = F,
-                          share_n_param = 0, 
-                          metric = c("VCD_BVKD",
-                                     "VCD_BVJA",
-                                     "VCD_KJ2",
-                                     "HOSP_BVK4" ,
-                                     "HOSP_BVJA" ,
-                                     "HOSP_KJ2"),
-                          BF = F) {
+                          share_n_param = 0,
+                          average_mu = 0) {
+  
+# check
+
+
+if(mono_lc_MO == 1 & mono_lc_SN != 1) stop("mono lcMO means mono lcSN")
+if(mono_lc_MO == 1 & mono_lc_MU != 1) stop("mono lcMO means mono lcMU")
   
 # set up -----------------------------------------------------------------------
 library(dplyr)
@@ -104,6 +132,7 @@ sapply(file.sources, source)
 comp_model = cmdstan_model(paste0("models/", stan_model),stanc_options = list("O1"))
 file_path = (paste0("output/", folder))
 dir.create(file_path, recursive = T, showWarnings = F)
+
 # data -------------------------------------------------------------------------
 hosp_Q = factor_VCD_Q(hosp_Q)
 VCD_Q = factor_VCD_Q(VCD_Q)
@@ -112,6 +141,19 @@ time_De = start_time_De : end_time_De
 time_De = time_De - time_De[1] + 1 # start at 1
 
 time_Bu = start_time_Bu : end_time_Bu
+
+if(average_mu == 1){ # titres are not serotype-specific 
+  mean_Q = exp(apply(log(mu_Q), 1, mean))
+  mean_De = exp(apply(log(mu_De[,2:5]), 1, mean))
+  mean_Bu = exp(apply(log(mu_Bu), 1, mean))
+
+  mu_Q[1,] = mean_Q[1]
+  mu_Q[2,] = mean_Q[2]
+  mu_De[1,2:5] = mean_De[1]
+  mu_De[2,2:5] = mean_De[2]
+  mu_Bu[1,] = mean_Bu[1]
+  mu_Bu[2,] = mean_Bu[2]
+}
 
 # fit Stan model ---------------------------------------------------------------
 list_data = format_stan_data_Q_De(
@@ -124,6 +166,7 @@ list_data = format_stan_data_Q_De(
   baseline_SP_De = baseline_SP_De,
   cases_De = cases_De,
   mu_De = mu_De,
+  VCD_years_Bu = VCD_years_Bu, 
   VCD_years_De = VCD_years_De,
   cases_Bu = cases_Bu,
   baseline_SP_Bu = baseline_SP_Bu,
@@ -146,6 +189,8 @@ list_data = format_stan_data_Q_De(
   L_mean = L_mean,
   L_sd = L_sd,
   enhancement = enhancement,
+  mono_lc = mono_lc, 
+  mono_lc_MO = mono_lc_MO,
   mono_lc_SN = mono_lc_SN,
   mono_lc_MU = mono_lc_MU,
   rho_K = rho_K,

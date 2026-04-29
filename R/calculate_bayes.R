@@ -1,3 +1,12 @@
+
+# Calculate Savage-Dickey Bayes factors for the waning parameter L
+#
+# Tests the hypothesis that the antibody waning rate (L) equals zero — i.e.
+# that there is no waning — separately for each of the three vaccines.
+# Uses the Savage-Dickey density ratio: BF = p(L=0 | prior) / p(L=0 | posterior).
+# A BF > 1 indicates the data favour no waning over waning; BF < 1 indicates
+# evidence for waning. Results are written to BF.csv in the specified directory.
+
 calculate_bayes = function(stan_fit,
                            L_mean,
                            L_sd,
@@ -8,11 +17,11 @@ calculate_bayes = function(stan_fit,
   library(truncnorm)
   library(logspline)
   
-  # Calculate prior density at 0 
+  # ── Prior density at L = 0 ────────────────────────────────────────────────
   
   prior_density = dtruncnorm(0, a=lower, mean = L_mean, sd = L_sd)
   
-  # Calculate posterior density at 0 
+  # ── Extract posterior draws for L ────────────────────────────────────────
   
   fit_ext = stan_fit$draws(format = "df")
   
@@ -20,13 +29,19 @@ calculate_bayes = function(stan_fit,
   post_samples_D = fit_ext$`L[2,1]`
   post_samples_B = fit_ext$`L[3,1]`
   
+  # ── Fit logspline density to posterior draws ──────────────────────────────
+  
   fit.posterior_Q = logspline(post_samples_Q)
   fit.posterior_D = logspline(post_samples_D)
   fit.posterior_B = logspline(post_samples_B)
   
+  # Evaluate the fitted posterior density at L = 0 (denominator of Savage-Dickey)
+  
   posterior_density_Q = dlogspline(0, fit.posterior_Q)
   posterior_density_D = dlogspline(0, fit.posterior_D)
   posterior_density_B = dlogspline(0, fit.posterior_B)
+  
+  # ── Compute Bayes factors ─────────────────────────────────────────────────
   
   
   BF_Q = prior_density / posterior_density_Q
