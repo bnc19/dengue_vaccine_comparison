@@ -4,7 +4,7 @@ This repository contains the code needed to reproduce the main results presented
 
 **_Modelling the efficacy of Qdenga, Dengvaxia, and the Butantan-DV dengue vaccines: a comparative analysis and open questions._**
 
-The workflow combines publicly available clinical trial datasets with a Bayesian survival model implemented in Stan. Trial datasets are standardized, reshaped into fixed-dimension arrays, and merged into a unified Stan input structure before model fitting and posterior analysis.
+The workflow combines publicly available clinical trial datasets with a Bayesian survival model implemented in Stan. Trial datasets are merged into a unified Stan input structure before model fitting and posterior analysis.
 
 Instructions to download and install **CmdStan** can be found [here](https://mc-stan.org/users/interfaces/cmdstan).  
 Instructions to download and install **Rtools** (Windows only) can be found [here](https://cran.r-project.org/bin/windows/Rtools/).
@@ -16,17 +16,14 @@ Instructions to download and install **Rtools** (Windows only) can be found [her
 
 The pipeline follows a reproducible sequence:
 
-1. **Import & standardise trial data**  
-   Raw datasets are converted to consistent categorical formats to ensure reproducible aggregation and plotting.
-
-2. **Trial-specific data formatting**  
+1. **Trial-specific data formatting**  
    Each vaccine dataset is summarised by age, serostatus, serotype, trial arm, and time. Counts are reshaped into multidimensional arrays required by Stan. Vaccine-specific formatted datasets are merged into a single Stan data list. 
 
-3. **Model calibration**  
+2. **Model calibration**  
    The Stan model is compiled and sampled using `cmdstanr`. Posterior draws, derived quantities, diagnostics, and evaluation metrics are saved.
 
-4. **Posterior analysis & visualisation**  
-   Model outputs are converted into interpretable vaccine efficacy and attack rate summaries for plotting.
+3. **Posterior analysis & visualisation**  
+   Model outputs are converted into interpretable vaccine efficacy and attack rate summaries and plotted.
 
 Scripts should be run in order (1–5) to reproduce manuscript figures.
 
@@ -38,7 +35,8 @@ Scripts should be run in order (1–5) to reproduce manuscript figures.
 Scripts execute the full pipeline from model calibration to figure generation:
 
 - **1.fit_all_trials.R**  
-  Runs the multi-trial Bayesian calibration using all vaccine datasets. The script is configured to run the final model (M21) first. Alternative model variants are implemented via configuration flags passed to the Stan model.
+  Runs the multi-trial Bayesian calibration using all vaccine datasets. The script is configured to run the final model (M4) first. Alternative model variants and sensitivity analyses are implemented via configuration flags passed to the Stan model.
+  → Outputs posterior generated quantities (attack rates, vaccine efficacy, antibody titres estimates for each vaccine - e.g., *AR_Bu.RDS*, n_Bu.*RDS* and *VE_Bu*.RDS), parameter posterior chains (*posterior_chains.csv*) and parameter posterior summarises (*posterior.csv*) in each model's output directory (e.g., *output/M4/*)
 
 - **2.plot_all_attack_rates_scatter.R**  
   For each vaccine, joins posterior attack rate estimates to observed trial data and produces observed vs. model-estimated scatter plots. Saves a combined faceted ggplot object (by vaccine) to disk for use in the next script.  
