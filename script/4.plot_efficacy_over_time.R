@@ -1,11 +1,16 @@
-# Script to plot VE of Dengvaxia and Qdenga up to 54 months. Script outputs Fig.3 and Fig.4. 
 
-rm(list = ls())
+# Script to plot each vaccine's efficacy over time by clinical outcome age,
+# serostatus, serotype, over time for 54 months. Inputs pre-computed model 
+# posteriors of vaccine efficacy (output of script 1). Saves the plots as PDFs
+# (Fig. 2 and Fig 3).
+
+# ── Set up script ─────────────────────────────────────────────────────────────
+
 library(tidyverse)
-source("R/plotting_functions.R")
+source("R/format_model_outputs_for_plotting.R")
 
 # colours 
-cols = c("#E6D192", "#A0C4D6","#8495B0")
+cols = c("#CC79A7", "#D55E00", "#8EAFBF", "#A9D6C6")
 
 theme_set(
   theme_bw() +
@@ -17,25 +22,47 @@ theme_set(
       plot.subtitle = element_text(size = 8),
       plot.caption = element_text(size = 8),
       legend.text = element_text(size = 6.5),
-      legend.title = element_blank()
+      legend.title = element_blank(),
+      strip.text.x       = element_text(size = 8, colour = "grey20"),
+      strip.background   = element_rect(fill = "grey93", colour = NA),
+      strip.clip         = "off",   # prevents label clipping if strip is narrow
+      legend.position    = "top",
+      legend.margin      = margin(b = 2),
+      legend.spacing.x   = unit(6, "pt"),
+      strip.text.y.right = element_text(
+        angle  = 0,
+        hjust  = 0,
+        size   = 8,
+        colour = "grey20"
+      )
     ))
 
 # files 
-input = "output/M21/"
+input = "output/M4/"
 
-VE_Q = readRDS(paste0(input, "VE_Q.RDS"))  # without age 
+# ── Load posterior VE summaries ───────────────────────────────────────────────
+
+VE_Q = readRDS(paste0(input, "VE_Q.RDS")) 
 VE_D = readRDS(paste0(input, "VE_De.RDS"))
+VE_B = readRDS(paste0(input, "VE_Bu.RDS"))
 
+# ── Extract and label posterior summaries ─────────────────────────────────────
 
 # VE 
 VE_D_model = extract_model_results(VE_D)  
 VE_Q_model = extract_model_results(VE_Q)  
+VE_B_model = extract_model_results(VE_B)  
 VE_D_model$vaccine = "Dengvaxia"
 VE_Q_model$vaccine = "Qdenga"
+VE_B_model$vaccine = "Butantan-DV"
 
-# combine both vaccines
+# ── Combine and reshape all three vaccines ────────────────────────────────────
+
+# Qdenga and Dengvaxia share the same name structure (serostatus/serotype/age/outcome/time)
+# and are joined first; Butantan-DV lacks an outcome dimension so is appended separately.
+
 comb_VE = VE_Q_model %>%
-  bind_rows(VE_D_model) %>% 
+  bind_rows(VE_D_model) %>%
   filter(group == "VE_Q" | group == "VE_De") %>%  
   separate(name, into = c("serostatus", "serotype","age", "outcome","time")) %>%  
   filter(age == 1 | age == 2 & group == "VE_Q") %>% # only Qdenga has age
@@ -45,27 +72,113 @@ comb_VE = VE_Q_model %>%
     serotype = factor(serotype, levels = 1:4, labels = c(paste0("DENV", 1:4))),
     outcome = factor(outcome, levels = 1:2,  labels = c("symptomatic", "hospitalised"))
     ) %>% 
+  bind_rows(VE_B_model %>% # Add Butantan-DV after as no outcome column 
+              separate(name, into = c("serostatus", "serotype","age","time")) %>% 
+              mutate(
+                month = as.numeric(time),
+                serostatus = factor(serostatus, levels = 1:3, labels = c("seronegative", "monotypic", "multitypic")),
+                serotype = factor(serotype, levels = 1:4, labels = c(paste0("DENV", 1:4))),
+                outcome = factor("symptomatic")
+              ) 
+  ) %>%  
+  # Truncate to 54 months (the common follow-up horizon across trials)
   filter(month <=54) %>% 
   mutate(age = ifelse(vaccine == "Qdenga" & age == 1, "4-5yrs", 
                       ifelse(vaccine == "Qdenga" & age == 2, "6-16yrs",
-                             ifelse(vaccine == "Dengvaxia", "2-16yrs", NA))))
+                             ifelse(vaccine == "Dengvaxia", "2-16yrs", "2-59yrs"))))
+
+
+# ── Fig2: VE against symptomatic disease ─────────────────────────────────────
 
 plot_ve_symp = comb_VE %>%   
   filter(outcome == "symptomatic") %>% 
-  ggplot(aes(x = month, y = mean, group = interaction(vaccine, age, sep = " "))) +
-  geom_ribbon(aes(ymin = lower, ymax = upper, fill = interaction(vaccine, age, sep = " ")), alpha = 0.3) +
-  geom_line(aes(color = interaction(vaccine, age, sep = " ")), size = 1.1) +
+  mutate(x = paste0(vaccine, "\n", age)) %>% 
+  ggplot(aes(x = month, y = mean, color = x, fill = x)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper),
+              alpha   = 0.15,
+              colour  = NA) + 
+  geom_line(
+    aes(y = mean),
+    colour      = "white",
+    linewidth   = 1.1,
+    show.legend = FALSE
+  ) +
+  geom_line(linewidth = 0.75) +
+  geom_hline(
+    yintercept = 0,
+    linetype   = "dashed",
+    colour     = "grey30",
+    linewidth  = 0.4
+  ) +
   labs(x = "Months post final dose", 
        y = "Vaccine efficacy\nagainst symptomatic disease (%)") +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "black", linewidth=1) +
-  facet_grid(serostatus ~ serotype) + 
+  facet_grid(serostatus  ~ serotype, scales = "free_y") + 
   theme(legend.position = "top") +
   scale_color_manual(values = cols) +
   scale_fill_manual(values = cols) +
-  scale_x_continuous(breaks = c(0,12,24,36,48))
+  scale_x_continuous(breaks = c(0,12,24,36,48)) +
+  guides(
+    colour = guide_legend(
+      title        = NULL,
+      nrow         = 1,
+      override.aes = list(linewidth = 1.2, fill = NA)
+    ),
+    fill = "none"
+  )
 
 ggsave(
   plot =  plot_ve_symp,
+  filename = "output/figures/Fig2.pdf",
+  height = 14,
+  width = 18,
+  units = "cm",
+  dpi = 300
+)
+
+
+# ── Fig3: VE against hospitalisation ─────────────────────────────────────────
+
+plot_ve_hosp = comb_VE %>%   
+  filter(outcome != "symptomatic") %>% 
+  mutate(x = paste0(vaccine, "\n", age)) %>% 
+  ggplot(aes(x = month, y = mean, color = x, fill = x)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper),
+              alpha   = 0.15,
+              colour  = NA) + 
+  geom_line(
+    aes(y = mean),
+    colour      = "white",
+    linewidth   = 1.1,
+    show.legend = FALSE
+  ) +
+  geom_line(
+    linewidth = 0.75
+  ) +
+  geom_hline(
+    yintercept = 0,
+    linetype   = "dashed",
+    colour     = "grey30",
+    linewidth  = 0.4
+  ) +
+  labs(x = "Months post final dose", 
+       y = "Vaccine efficacy\nagainst hospitalisation(%)") +
+  facet_grid(serostatus  ~ serotype, scales = "free_y") + 
+  theme(legend.position = "top") +
+  scale_color_manual(values = cols[2:4]) +
+  scale_fill_manual(values = cols[2:4]) +
+  scale_x_continuous(breaks = c(0,12,24,36,48)) +
+  guides(
+    colour = guide_legend(
+      title        = NULL,
+      nrow         = 1,
+      override.aes = list(linewidth = 1.2, fill = NA)
+    ),
+    fill = "none"
+  )
+
+
+ggsave(
+  plot =  plot_ve_hosp,
   filename = "output/figures/Fig3.pdf",
   height = 14,
   width = 18,
@@ -73,29 +186,4 @@ ggsave(
   dpi = 300
 )
 
-
-
-plot_ve_hosp = comb_VE %>%   
-  filter(outcome != "symptomatic") %>% 
-  ggplot(aes(x = month, y = mean, group = interaction(vaccine, age, sep = " "))) +
-  geom_ribbon(aes(ymin = lower, ymax = upper, fill = interaction(vaccine, age, sep = " ")), alpha = 0.3) +
-  geom_line(aes(color = interaction(vaccine, age, sep = " ")), size = 1.1) +
-  labs(x = "Months post final dose", 
-       y = "Vaccine efficacy\nagainst hospitalisation (%)") +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "black", linewidth=1) +
-  facet_grid(serostatus ~ serotype) + 
-  theme(legend.position = "top") +
-  scale_color_manual(values = cols) +
-  scale_fill_manual(values = cols) +
-  scale_x_continuous(breaks = c(0,12,24,36,48))
-
-
-ggsave(
-  plot =  plot_ve_hosp,
-  filename = "output/figures/Fig4.pdf",
-  height = 14,
-  width = 18,
-  units = "cm",
-  dpi = 300
-)
 
