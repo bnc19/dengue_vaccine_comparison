@@ -15,6 +15,9 @@ n_it = 6000 ## NOTE: this could take several hours to run depending on the machi
 
 dir.create("output", showWarnings = F)
 
+# ── Run main model variants ───────────────────────────────────────────────────
+
+
 # M1  -----------------------------------------
 run_model_TR (
   mono_lc_MU = 2,
@@ -260,6 +263,7 @@ run_model_TR (
 )
 
 
+# ── Run additional sensitivity analyses ───────────────────────────────────────
 
 
 # M10 - M4 but serotype specific L for Qdenga   ---------------------------------
@@ -393,19 +397,6 @@ run_model_TR (
 )
  
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 # M15 - M4 but not serotype-specific titres ----------------------------------
 
 run_model_TR (
@@ -496,7 +487,7 @@ run_model_TR (
 )
 
 
-# # MS1 - M24 but severe data and age-specific psi  ------------------------------
+# # MS1 - M4 but severe data and age-specific psi  -----------------------------
 run_model_TR (
   psi_J = 1,
   BF = T, 
