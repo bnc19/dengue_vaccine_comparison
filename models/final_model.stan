@@ -2,13 +2,13 @@ data{
    int<lower = 1> C; // No. current immune status
    int<lower = 1> B; // No. baseline serostatus
    int<lower = 1> K; // No. serotypes
-   int<lower = 1> D_Q; // No. Qdenga vcd data
-   int<lower = 1> D_De; // No. Deng vcd data
+   int<lower = 1> D_Q; // No. Qdenga vcd data time points
+   int<lower = 1> D_De; // No. Deng vcd data time points
+   int<lower = 1> D_Bu; // No. But vcd data time points
    int<lower = 1> V; // No. trial arms 
    int<lower = 1> J_Q; // No. age groups
    int<lower = 1> J_De; // No. age groups
    int<lower = 1> J_Bu; // No. age groups
-   int<lower = 1> A; // No. age vcd data 
    int<lower = 1> T_Q; // No. Q model time points 
    int<lower = 1> T_De; // No. D model time points
    int<lower = 1> T_Bu; // No. D model time points
@@ -47,25 +47,27 @@ array[TR, B, K] real<lower=0> mu; // trial specific titres at T0
    array[D_Q] int<lower=0> VCD_D_Q;    // total VCD 
    array[D_Q] int<lower=0> HOSP_D_Q;   // total hosp  
    
+   array[B*V*K*J_Q] int<lower=0> VCD_BVKJ_Q;  
    array[B*V*K,D_Q] int<lower=0> VCD_BVKD_Q;  
-   array[B*V*J_Q,A] int<lower=0> VCD_BVJA_Q;  
+   array[B*V*J_Q,D_Q] int<lower=0> VCD_BVJD_Q;  
    array[K*J_Q,2] int<lower=0> VCD_KJ2_Q;     //  12 and 24 months
-   array[B*V*J_Q,A] int<lower=0> HOSP_BVJA_Q; 
+   array[B*V*K*J_Q] int<lower=0> HOSP_BVKJ_Q; 
+   array[B*V*J_Q,D_Q] int<lower=0> HOSP_BVJD_Q; 
    array[B*V*K,4] int<lower=0> HOSP_BVK4_Q; 
    array[K*J_Q,2] int<lower=0> HOSP_KJ2_Q;    //  12 and 24 months
    array[B,V,J_Q,D_Q] int<lower=0> pop_Q;       
    array[B,V,D_Q] int<lower=0> pop_BVD_Q;    
-   array[B,V] int<lower=0> N_VCD_BV5_Q;     // cases in t_5 (not age-specific)
-   
+
    // Butantan-DV data
    
    array[J_Bu] int<lower=0> SP_J_Bu; // baseline seropositive 
    array[J_Bu] int<lower=0> pop_J_Bu; // baseline pop
-   int<lower=0> VCD_Bu; // total VCD 
-   array[B*V*2] int<lower=0> VCD_BVK_Bu; 
-   array[B*V*J_Bu] int<lower=0> VCD_BVJ_Bu; 
-   array[B,V,J_Bu] int<lower=0> pop_BVJ_Bu;  
-   int<lower=0> pop_Bu; // total pop  
+   array[D_Bu] int<lower=0> VCD_D_Bu; // total VCD 
+   array[B*V*2,    D_Bu] int<lower=0> VCD_BVKD_Bu; 
+   array[B*V*J_Bu, D_Bu] int<lower=0> VCD_BVJD_Bu;
+   array[B*V*J_Bu*2]     int<lower=0> VCD_BVKJ_Bu; 
+   array[B,V,J_Bu, D_Bu] int<lower=0> pop_BVJD_Bu;  
+   array[D_Bu] int<lower=0> popD_Bu; // total pop  
 
   
   // FLAGS
@@ -79,12 +81,14 @@ array[TR, B, K] real<lower=0> mu; // trial specific titres at T0
    int<lower = 0, upper = 1> include_eps;      // include enhanced secondary hosp? (T/F)
    real<lower = 0> L_mean;                     // mean (trunc normal) L prior
    real<lower = 0> L_sd;                       // sd (trunc normal) L prior 
+   int<lower = 0, upper = 1> mono_lc_MO;       // 0 for serotype specific lc MO / 1 for single 
    int<lower = 0, upper = 2> mono_lc_SN;       // 0 for serotype specific lc SN / 1 for single / 2 for offset from MO
    int<lower = 0, upper = 2> mono_lc_MU;       // 0 for serotype specific lc MO / 1 for single / 2 for offset from MO
-   int<lower = 0, upper = 1> rho_K;           // 0 for mono rho, 1 for serotype rho 
-   int<lower = 0, upper = 2> w_CK;            // 0 for mono w, 1 for serostatus w, 2 for serotype w 
-   int<lower = 0, upper = 2> alpha_CK;        // 0 for mono alpha, 1 for serostatus alpha, 2 for serotype alpha 
-
+   int<lower = 0, upper = 1> rho_K;            // 0 for mono rho, 1 for serotype rho 
+   int<lower = 0, upper = 2> w_CK;             // 0 for mono w, 1 for serostatus w, 2 for serotype w 
+   int<lower = 0, upper = 2> alpha_CK;         // 0 for mono alpha, 1 for serostatus alpha, 2 for serotype alpha 
+   int<lower = 0, upper = 1> mono_lc;          // 0 for serostatus specific lc, 1 for single lc
+   
 // vaccine specific flags (age and hospitalisation)
 array[TR] int<lower = 0, upper = 3> include_beta;   // include age-specific nc50?: 1= change age groups 1 & 2 for both outcomes / 2 = only age grp 1, sep for each outcome / 3 = only age grp 1 for both outcomes 
 array[TR] int<lower = 0, upper = 1> L_K;          // 0 for mono L, 1 for serotype K 
@@ -112,9 +116,9 @@ transformed data {
   vector[D_Q] v_VCD_D_Q = to_vector(VCD_D_Q);    // total VCD
   vector[D_Q] v_HOSP_D_Q = to_vector(HOSP_D_Q);   // total hosp
   matrix[B*V*K,D_Q] v_VCD_BVKD_Q=to_matrix(VCD_BVKD_Q);  // VCD
-  matrix[B*V*J_Q,A] v_VCD_BVJA_Q=to_matrix(VCD_BVJA_Q);  // VCD
+  matrix[B*V*J_Q,D_Q] v_VCD_BVJD_Q=to_matrix(VCD_BVJD_Q);  // VCD
   matrix[K*J_Q,2] v_VCD_KJ2_Q=to_matrix(VCD_KJ2_Q);     // VCD at 12 and 24 months
-  matrix[B*V*J_Q,A] v_HOSP_BVJA_Q=to_matrix(HOSP_BVJA_Q); // hosp
+  matrix[B*V*J_Q,D_Q] v_HOSP_BVJD_Q=to_matrix(HOSP_BVJD_Q); // hosp
   matrix[B*V*K,4] v_HOSP_BVK4_Q=to_matrix(HOSP_BVK4_Q); // hosp
   matrix[K*J_Q,2] v_HOSP_KJ2_Q =to_matrix(HOSP_KJ2_Q);    // hosp at 12 and 24 months
 
@@ -174,7 +178,7 @@ for(d in 1:D_Q){
 
 parameters{
 // FOI 
-array[2] real<lower = 0> lambda_K_Bu;            // FOR B  (not time specific, only 2 serotypes)
+array[2, D_Bu] real<lower = 0> lambda_KD_Bu;     // FOR B  (only 2 serotypes)
 array[K, D_Q] real<lower = 0> lambda_D_Q;        // FOI Q
 array[D_De] real<lower = 0> lambda_D_De;         // FOI De not serotype specific 
 simplex[K] theta;                                // proportion of each serotype circulating in the Dengvaxia trial               
@@ -241,15 +245,15 @@ if(rho_K==1) {
   array[C, V, K, J_Q, T_Q] real<lower=0> RR_hosp_Q;
 
   
-  // censor population for last time interval 
-  array[B, V, J_Q, D_Q] real<lower=0> pop_BVJD_Q;
   // Matrix distribution of cases
   matrix[K*J_Q, 2]   pD_KJ2_Q;    
-  matrix[B*V*K, D_Q] pD_BVKD_Q;   
-  matrix[B*V*J_Q, A] pD_BVJA_Q;   
+  matrix[B*V*K,D_Q]  pD_BVKD_Q; 
+  vector[B*V*K*J_Q]  pD_BVKJ_Q;   
+  matrix[B*V*J_Q,D_Q] pD_BVJD_Q;   
   matrix[K*J_Q, 2]   pH_KJ2_Q;    
-  matrix[B*V*K, 4]   pH_BVK4_Q;   
-  matrix[B*V*J_Q, A] pH_BVJA_Q;
+  matrix[B*V*K, 4]   pH_BVK4_Q;  
+  vector[B*V*K*J_Q]  pH_BVKJ_Q;
+  matrix[B*V*J_Q,D_Q] pH_BVJD_Q;
   real<lower=0> shape1_Q; // pk3 prior
   real<lower=0> shape2_Q; 
   //  distribution of cases
@@ -286,28 +290,29 @@ if(rho_K==1) {
   array[J_Bu] real<lower=0, upper=1> pSP_Bu; // prob SP (baseline for likelihood)
   real ll_Bu; // log-likelihood passed to model block and then added to target
   
-  array[B,V,2,J_Bu] real<lower = 0> Sy_BVKJ_Bu;
-  array[V,2,J_Bu]   real<lower = 0> Sy_VKJ_Bu;
-
+  array[B,V,2,J_Bu,D_Bu] real<lower = 0> Sy_BVKJD_Bu;
+ 
   array[B,2,T_Bu] real<lower = 0> n_Bu; // titres
   array[C,V,2,J_Bu,T_Bu] real<lower = 0> RR_symp_Bu;                  
 
   // matrix distribution of cases
-  vector[B*V*2] mD_BVK_Bu;    
-  vector[B*V*J_Bu] mD_BVJ_Bu;  
+  matrix[B*V*2,D_Bu] mD_BVKD_Bu;    
+  matrix[B*V*J_Bu,D_Bu] mD_BVJD_Bu;  
+  vector[B*V*2*J_Bu] mD_BVKJ_Bu; 
+
   
   real<lower=0> shape1_Bu; // pk2 prior
   real<lower=0> shape2_Bu; 
   
   // distribution of cases
-  real<lower=0, upper=1> pC_Bu;
+  array[D_Bu] real<lower=0, upper=1> pC_D_Bu;
 
   
 // ################ Biphasic titre decay rates shared? #########################
 
 array[TR, B] real pi_1; // decay rate 1 
-array[TR]    real pi_2;          // decay rate 2
-array[TR,B ] real ts2; 
+array[TR]    real pi_2; // decay rate 2
+array[TR, B] real ts2; 
 
 if(share_n_param == 1){
   for(t in 1:TR){
@@ -339,12 +344,15 @@ if(share_n_param == 1){
 // ######################## BUTANTAN BLOCK  ####################################
   { // this { defines a block within which variables declared are local (can't have lower or upper)
   
+
+  array[D_Bu] real lambda_mD;
   real lambda_m;
   real pm; 
   
-  // p by lambda 
-  lambda_m = mean(lambda_K_Bu); // mean across D1 and D1
-  pm = 1-exp(-38.5*12*lambda_m); // always prob exposure to a single serotype 
+  // contrain p3 by lambda 
+  for(d in 1:D_Bu) lambda_mD[d] = mean(lambda_KD_Bu[ ,d]); // mean FOI at time D 
+  lambda_m = (lambda_mD[1] * 24 + lambda_mD[2] * 36) / 60; // weighted mean across D1 and D1
+  pm = 1-exp(-38.5*12*lambda_m); // always prob exposure to a single serotype in oldest age group 
  
   if(pm<1e-3) pm=1e-3;
   if(pm>0.99) pm=0.99;
@@ -352,7 +360,7 @@ if(share_n_param == 1){
   shape1_Bu = (((1-pm) / vari) - (1/pm)) * (pm^2) ;
   shape2_Bu = shape1_Bu * (1/pm - 1);
 
-  array [K,J_Bu] real p_KJ; // serotype age prob exposure 
+  array [K,J_Bu] real p_KJ; // serotype age prob exposure at baseline 
   
   array [J_Bu] real TpSN;              // true SN
   array [K,J_Bu] real TpMO;            // true monotypic  
@@ -368,7 +376,7 @@ if(share_n_param == 1){
   array [C,2,T_Bu] real n_C;                   // allow for multitypic titres 
   array [C,2]      real L_C;                   // MO and MU L = 1 
   array [C,2,J_Bu] real nc50;                  // nc50
-  array [2,J_Bu,T_Bu] real lambda;                // FOI 
+  array [2,J_Bu,T_Bu] real lambda;             // FOI 
 
   array [B,V,2,J_Bu,T_Bu] real Inc1;
   array [B,V,2,J_Bu,T_Bu] real Inc2;
@@ -378,16 +386,19 @@ if(share_n_param == 1){
   array [B,V,2,J_Bu,T_Bu] real D1;
   array [B,V,2,J_Bu,T_Bu] real D2;
   array [B,V,2,J_Bu,T_Bu] real D34;
-  array [B,V,2,J_Bu]   real Di;
+  array [B,V,2,J_Bu,D_Bu] real Di;
   
   // cases 
-  array [2,J_Bu]   real Sy_KJ;
-  array [J_Bu]     real Sy_J;
-  real Sy;
-  
+  array [V,2,J_Bu,D_Bu]  real Sy_VKJD;
+  array [2,J_Bu,D_Bu]    real Sy_KJD;
+  array [J_Bu,D_Bu]      real Sy_JD;
+  array [D_Bu]           real Sy_D;
+
   // prop cases
-  array [B,V,2]   real pD_BVK; 
-  array [B,V,J_Bu]   real pD_BVJ; 
+  array [B,V,2,D_Bu]      real pD_BVKD; 
+  array [B,V,J_Bu,D_Bu]   real pD_BVJD; 
+  array [B,V,2,J_Bu]      real pD_BVKJ; 
+
 
 // BIPHASIC TITRES 
 
@@ -476,6 +487,8 @@ for(v in 1:V)
 // age-group titre offsets 
 array [2] real e_beta = {exp(beta[3,1]), exp(beta[3,2])};
       
+if(mono_lc ==0){    
+   
 if(mono_lc_SN == 1){ // SN, oldest
   for(k in 1:2) nc50[1,k,3] = exp(lc[3,1,1]); 
    } else if (mono_lc_SN == 0) {
@@ -501,7 +514,11 @@ if(mono_lc_MU == 1){ // MU, oldest
 }
 
 // MO, oldest
+if(mono_lc_MO == 1){
+  for(k in 1:2)  nc50[2,k,3] = exp(lc[3,2,1]); // MO, serotype, oldest
+} else{
 for(k in 1:2)  nc50[2,k,3] = exp(lc[3,2,k]); // MO, serotype, oldest
+}
 
 // age group offsets 
 if(include_beta[3] == 1){
@@ -524,7 +541,11 @@ if(include_beta[3] == 1){
   }
 }
 
-
+} else {
+  for(c in 1:C) 
+   for(k in 1:2) 
+    for(j in 1:J_Bu) nc50[c,k,j] = exp(lc[3,1,1]); 
+}
 
 // Enhancement 
 for(k in 1:2){
@@ -563,12 +584,16 @@ array [J_Bu] real FOI_J = {FOI_J1[3], 1, 1}  ; // scale youngest group only
 
 if(inc_FOIJ[3] == 0) {
 for(k in 1:2)
- for(j in 1:J_Bu)
-  for(t in 1:T_Bu)  lambda[k,j,t] = exp(-lambda_K_Bu[k]) ; 
+ for(j in 1:J_Bu) { 
+  for(t in 1:24)     lambda[k,j,t] = exp(-lambda_KD_Bu[k, 1]) ; 
+  for(t in 25:T_Bu)  lambda[k,j,t] = exp(-lambda_KD_Bu[k, 2]) ; 
+  }
 } else{
 for(k in 1:2)
- for(j in 1:J_Bu)
-  for(t in 1:T_Bu)  lambda[k,j,t] = exp(-lambda_K_Bu[k] * FOI_J[j]) ; 
+ for(j in 1:J_Bu){
+  for(t in 1:24)     lambda[k,j,t] = exp(-lambda_KD_Bu[k,1] * FOI_J[j]) ; 
+  for(t in 25:T_Bu)  lambda[k,j,t] = exp(-lambda_KD_Bu[k,2] * FOI_J[j]) ;
+  }
 }
 
 // SURVIVAL MODEL - prob of surviving each time point without infection - only D1 and D2 lambda 
@@ -662,12 +687,13 @@ for(b in 1:B)
            D34[b,v,k,j,t] = (Inc3[b,v,k,j,t] + Inc4[b,v,k,j,t]) * rhoT[k] * gammaT[k] * phiT[k] * RR_symp_Bu[3,v,k,j,t];  
          }}}
 
-// Aggregate to match published time points e.g. 1-24 months 
+// Aggregate to match published time points e.g. 1-24, 25-60 months 
 for(b in 1:B)
  for(v in 1:V)
   for(k in 1:2)
    for(j in 1:J_Bu){
-   Di[b,v,k,j] = sum(D1[b,v,k,j,1:T_Bu])  + sum(D2[b,v,k,j,1:T_Bu]) + sum(D34[b,v,k,j,1:T_Bu]); 
+   Di[b,v,k,j,1] = sum(D1[b,v,k,j,1:24])  + sum(D2[b,v,k,j,1:24]) + sum(D34[b,v,k,j,1:24]); 
+   Di[b,v,k,j,2] = sum(D1[b,v,k,j,25:60])  + sum(D2[b,v,k,j,25:60]) + sum(D34[b,v,k,j,25:60]); 
    }
 
 // Cases 
@@ -675,60 +701,81 @@ for(b in 1:B)
  for(v in 1:V) 
   for(k in 1:2)
    for(j in 1:J_Bu) 
-          Sy_BVKJ_Bu[b,v,k,j] = Di[b,v,k,j] * sum(pop_BVJ_Bu[ ,v,j]); 
+    for(d in 1:D_Bu)
+          Sy_BVKJD_Bu[b,v,k,j,d] = Di[b,v,k,j,d] * sum(pop_BVJD_Bu[ ,v,j,d]); 
 
 // sum over symp
+
 for(v in 1:V) 
  for(k in 1:2) 
   for(j in 1:J_Bu) 
-  Sy_VKJ_Bu[v,k,j] = sum(Sy_BVKJ_Bu[ ,v,k,j]) ; 
+   for(d in 1:D_Bu)
+  Sy_VKJD[v,k,j,d] = sum(Sy_BVKJD_Bu[ ,v,k,j,d]) ; 
 
-    
 for(k in 1:2) 
  for(j in 1:J_Bu) 
- Sy_KJ[k,j] = sum(Sy_VKJ_Bu[ ,k,j]) ;  
+  for(d in 1:D_Bu)
+ Sy_KJD[k,j,d] = sum(Sy_VKJD[ ,k,j,d]) ;  
    
-
 for(j in 1:J_Bu) 
- Sy_J[j] = sum(Sy_KJ[ ,j]) ; 
+ for(d in 1:D_Bu)
+ Sy_JD[j,d] = sum(Sy_KJD[ ,j,d]) ; 
 
+for(d in 1:D_Bu) Sy_D[d] = sum(Sy_JD[ ,d]) ;
  
- Sy = sum(Sy_J) ; 
-
 for(b in 1:B)
  for(v in 1:V)
    for(k in 1:2)
-    for(j in 1:J_Bu){
-  pD_BVK[b,v,k] = sum(Sy_BVKJ_Bu[b,v,k, ]) / Sy ; // serotype serostatus symp
-  pD_BVJ[b,v,j] = sum(Sy_BVKJ_Bu[b,v, ,j]) / Sy ;   // age serostatus symp 
+    for(j in 1:J_Bu)
+     for(d in 1:D_Bu){
+  pD_BVKD[b,v,k,d] = sum(Sy_BVKJD_Bu[b,v,k, ,d]) / Sy_D[d] ;   // serotype arm serostatus symp
+  pD_BVJD[b,v,j,d] = sum(Sy_BVKJD_Bu[b,v, ,j,d]) / Sy_D[d] ;   // age arm serostatus symp 
+  pD_BVKJ[b,v,k,j] = sum(Sy_BVKJD_Bu[b,v,k,j, ]) / sum(Sy_D) ; // serotype age arm serostatus symp 
+    
   }
 
 // matrix for likelihood function 
 
-for(k in 1:2){ // 2 serotypes 
-  mD_BVK_Bu[k]   =   pD_BVK[1,1,k] ; // SN C
-  mD_BVK_Bu[k+2] =   pD_BVK[1,2,k] ; // SN V
-  mD_BVK_Bu[k+4] =   pD_BVK[2,1,k] ; // SP C
-  mD_BVK_Bu[k+6] =   pD_BVK[2,2,k] ; // SP V
+for(k in 1:2) // 2 serotypes
+ for(d in 1:D_Bu){  
+  mD_BVKD_Bu[k,d]   =   pD_BVKD[1,1,k,d] ; // SN C
+  mD_BVKD_Bu[k+2,d] =   pD_BVKD[1,2,k,d] ; // SN V
+  mD_BVKD_Bu[k+4,d] =   pD_BVKD[2,1,k,d] ; // SP C
+  mD_BVKD_Bu[k+6,d] =   pD_BVKD[2,2,k,d] ; // SP V
 }
 
-for(j in 1:J_Bu){ // 3 ages 
-   mD_BVJ_Bu[j]     =  pD_BVJ[1,1,j]; //  SN C 
-   mD_BVJ_Bu[j+3]   =  pD_BVJ[1,2,j]; //  SN V
-   mD_BVJ_Bu[j+6]   =  pD_BVJ[2,1,j]; //  SP C 
-   mD_BVJ_Bu[j+9]   =  pD_BVJ[2,2,j]; //  SP V
+for(j in 1:J_Bu)
+ for(d in 1:D_Bu){ // 3 ages 
+   mD_BVJD_Bu[j,d]     =  pD_BVJD[1,1,j,d]; //  SN C 
+   mD_BVJD_Bu[j+3,d]   =  pD_BVJD[1,2,j,d]; //  SN V
+   mD_BVJD_Bu[j+6,d]   =  pD_BVJD[2,1,j,d]; //  SP C 
+   mD_BVJD_Bu[j+9,d]   =  pD_BVJD[2,2,j,d]; //  SP V
   }
   
- pC_Bu = Sy / pop_Bu; 
+  
+for(j in 1:J_Bu){ // 2 serotypes
+  mD_BVKJ_Bu[j]    =   pD_BVKJ[1,1,1,j] ; // SN C D1
+  mD_BVKJ_Bu[j+3]  =   pD_BVKJ[1,1,2,j] ; // SN C D2
+  mD_BVKJ_Bu[j+6]  =   pD_BVKJ[1,2,1,j] ;   // SN V D1
+  mD_BVKJ_Bu[j+9]  =   pD_BVKJ[1,2,2,j] ;   // SN V D2
+  mD_BVKJ_Bu[j+12] =   pD_BVKJ[2,1,1,j] ;   // SP C D1
+  mD_BVKJ_Bu[j+15] =   pD_BVKJ[2,1,2,j] ;   // SP C D2
+  mD_BVKJ_Bu[j+18] =   pD_BVKJ[2,2,1,j] ;   // SP V D1
+  mD_BVKJ_Bu[j+21] =   pD_BVKJ[2,2,2,j] ;   // SP V D2
+}
+  
+ 
+ for(d in 1:D_Bu) pC_D_Bu[d] = Sy_D[d] / popD_Bu[d]; 
 
 
 // log likelihood 
  ll_Bu=0;
  ll_Bu += binomial_lpmf(SP_J_Bu | pop_J_Bu, pSP_Bu);
- ll_Bu += binomial_lpmf(VCD_Bu  | pop_Bu, pC_Bu);
- ll_Bu += multinomial_lpmf(VCD_BVK_Bu  | mD_BVK_Bu) ;
- ll_Bu += multinomial_lpmf(VCD_BVJ_Bu  | mD_BVJ_Bu) ;
- 
+ ll_Bu += binomial_lpmf(VCD_D_Bu  | popD_Bu, pC_D_Bu);
+ for(d in 1:D_Bu) ll_Bu += multinomial_lpmf(VCD_BVKD_Bu[ ,d]  | mD_BVKD_Bu[ ,d]) ;
+ for(d in 1:D_Bu) ll_Bu += multinomial_lpmf(VCD_BVJD_Bu[ ,d]  | mD_BVJD_Bu[ ,d]) ;
+ ll_Bu += multinomial_lpmf(VCD_BVKJ_Bu|mD_BVKJ_Bu) ;
+
 }
 // ######################### QDENGA BLOCK  #####################################
 
@@ -775,7 +822,8 @@ array[C, K, R] real L_C;    // MO and MU L = 1
 array[C, K, J_Q, R] real nc50; // nc50
 
 // FOI 
-array[K, T_Q] real lambda; // FOI 
+
+array[K, J_Q, T_Q] real lambda; // FOI 
 
 // Incidence and disease outcomes
 array[B, V, K, J_Q, T_Q] real Inc1;
@@ -793,20 +841,14 @@ array[B, V, K, J_Q, T_Q] real H34;
 array[B, V, K, J_Q, D_Q] real Di;
 array[B, V, K, J_Q, D_Q] real H;
 
-// Population structure
-array[V, J_Q, D_Q] real pop_VJD;
-
 // Case distributions
+array[B, V, K, J_Q, R] real pC_BVKJR;
 array[B, V, K, R, D_Q] real pC_BVKRD;
-array[B, V, J_Q, R, A] real pC_BVJRA;
+array[B, V, J_Q, R, D_Q] real pC_BVJRD;
 array[B, V, K, 4] real pC_BVK4;
 array[K, J_Q, R, 2] real pC_KJR2;
-array[J_Q] real pJ_VCD; // age dist of cases for month 37-48
 
 // Case counts for different strata
-array[B, V, J_Q] real C_BVJ5; // serostatus trial age cases for month 37-48
-array[B, J_Q] real C_BJ5;     // serostatus age cases for month 37-48
-array[J_Q] real C_J5;         // age cases for month 37-48
 array[B, V, K, J_Q, R, 4] real C_BVKJR4;
 array[V, K, J_Q, R, D_Q] real C_VKJRD;
 array[J_Q, R, D_Q] real C_JRD;
@@ -918,7 +960,6 @@ for (v in 1:V) {
 array[2] real e_beta = {exp(beta[1,1]), exp(beta[1,2])};
 array[C,K] real e_alpha; 
 
-
 for(k in 1:K)
  for(c in 1:C){
    if(alpha_CK == 0){ 
@@ -929,6 +970,9 @@ for(k in 1:K)
          e_alpha[c,k] = exp(-alpha[1,k]);  // serotype outcome offset 
          }}
         
+        
+if(mono_lc ==0){    
+
 if(mono_lc_SN == 1){ // SN, oldest, symp 
   for(k in 1:K) nc50[1,k,3,1] = exp(lc[1,1,1]); 
    } else if (mono_lc_SN == 0) {
@@ -945,8 +989,13 @@ if(mono_lc_MU == 1){ // MU, oldest, symp
    for(k in 1:K)  nc50[3,k,3,1] = exp(lc[1,2,k]) * exp(-omega[1]); 
 }
 
-// MO, oldest, symp
+// MO, oldest
+if(mono_lc_MO == 1){
+  for(k in 1:K) nc50[2,k,3,1] = exp(lc[1,2,1]);  // MO, serotype, oldest
+} else{
 for(k in 1:K) nc50[2,k,3,1] = exp(lc[1,2,k]); 
+}
+
 
 // age group offsets 
 if(include_beta[1] == 1){
@@ -969,17 +1018,25 @@ if(include_beta[1] == 1){
   }
 }
 
+} else {
+ for(c in 1:C)
+   for(k in 1:K) 
+    for(j in 1:J_Q) 
+       nc50[c,k,j,1] = exp(lc[1,1,1]); 
+
+} 
+
 // hosp 
 for(c in 1:C)
  for(k in 1:K) 
   for(j in 1:J_Q) // outcome differences 
     nc50[c,k,j,2] =   nc50[c,k,j,1] * e_alpha[c,k];
 
-if(include_beta[1] == 2){ // age and outcome 
+if(include_beta[1] == 2){ // age and outcome
   for(c in 1:C)
    for(k in 1:K){
-     nc50[c,k,1,1] =   nc50[c,k,1,1] * e_beta[1]; 
-     nc50[c,k,1,2] =   nc50[c,k,1,2] * e_beta[2]; 
+     nc50[c,k,1,1] =   nc50[c,k,1,1] * e_beta[1];
+     nc50[c,k,1,2] =   nc50[c,k,1,2] * e_beta[2];
    }
 }
 
@@ -1011,6 +1068,7 @@ for(c in 1:C)
      if(w_CK == 0){
      RR_symp_Q[c,2,k,j,t] = L_C[c,k,1] / (1 +  (n_C[c,k,t] / nc50[c,k,j,1])^w[1,1]) ;
      RR_hosp_Q[c,2,k,j,t] = L_C[c,k,2] / (1 +  (n_C[c,k,t] / nc50[c,k,j,2])^w[1,1]) ;
+ 
      } else if(w_CK == 1){
      RR_symp_Q[c,2,k,j,t] = L_C[c,k,1] / (1 +  (n_C[c,k,t] / nc50[c,k,j,1])^w[1,c]) ;
      RR_hosp_Q[c,2,k,j,t] = L_C[c,k,2] / (1 +  (n_C[c,k,t] / nc50[c,k,j,2])^w[1,c]) ;  
@@ -1021,30 +1079,50 @@ for(c in 1:C)
      RR_symp_Q[c,1,k,j,t] =  1 ;
      RR_hosp_Q[c,1,k,j,t] =  1 ;
     }
+    
+     
 
 // FOI  
-for(k in 1:K){
-  for(t in 1:12)  lambda[k,t] = exp(-lambda_D_Q[k,1]);
-  for(t in 13:18) lambda[k,t] = exp(-lambda_D_Q[k,2]);
-  for(t in 19:24) lambda[k,t] = exp(-lambda_D_Q[k,3]);
-  for(t in 25:36) lambda[k,t] = exp(-lambda_D_Q[k,4]);
-  for(t in 37:48) lambda[k,t] = exp(-lambda_D_Q[k,5]);
-  for(t in 49:54) lambda[k,t] = exp(-lambda_D_Q[k,6]);
+
+array [J_Q] real FOI_J = {FOI_J1[1], 1, 1}  ; // scale youngest group only 
+
+if(inc_FOIJ[1] == 0) {
+for(k in 1:K)
+ for(j in 1:J_Q){
+  for(t in 1:12)  lambda[k,j,t] = exp(-lambda_D_Q[k,1]);
+  for(t in 13:18) lambda[k,j,t] = exp(-lambda_D_Q[k,2]);
+  for(t in 19:24) lambda[k,j,t] = exp(-lambda_D_Q[k,3]);
+  for(t in 25:36) lambda[k,j,t] = exp(-lambda_D_Q[k,4]);
+  for(t in 37:48) lambda[k,j,t] = exp(-lambda_D_Q[k,5]);
+  for(t in 49:54) lambda[k,j,t] = exp(-lambda_D_Q[k,6]);
 }
+} else{
+for(k in 1:K)
+ for(j in 1:J_Q){
+  for(t in 1:12)  lambda[k,j,t] = exp(-lambda_D_Q[k,1] * FOI_J[j]);
+  for(t in 13:18) lambda[k,j,t] = exp(-lambda_D_Q[k,2] * FOI_J[j]);
+  for(t in 19:24) lambda[k,j,t] = exp(-lambda_D_Q[k,3] * FOI_J[j]);
+  for(t in 25:36) lambda[k,j,t] = exp(-lambda_D_Q[k,4] * FOI_J[j]);
+  for(t in 37:48) lambda[k,j,t] = exp(-lambda_D_Q[k,5] * FOI_J[j]);
+  for(t in 49:54) lambda[k,j,t] = exp(-lambda_D_Q[k,6] * FOI_J[j]);
+}
+}
+
+
 
 // SURVIVAL MODEL - prob of surviving each time point without infection 
 for(b in 1:B)
  for(v in 1:V)
   for(j in 1:J_Q)
-   for(t in 1:T_Q) pSN[b,v,j,(t+1)] = lambda[1,t]*lambda[2,t]*lambda[3,t]*lambda[4,t] * pSN[b,v,j,t];
+   for(t in 1:T_Q) pSN[b,v,j,(t+1)] = lambda[1,j,t]*lambda[2,j,t]*lambda[3,j,t]*lambda[4,j,t] * pSN[b,v,j,t];
 
   
 for(b in 1:B)
  for(v in 1:V)
   for(k in 1:K)
    for(j in 1:J_Q) {
-    for(t in 1:T_Q) pMO[b,v,k,j,(t+1)] = lambda[1,t]*lambda[2,t]*lambda[3,t]*lambda[4,t]/lambda[k,t]* pMO[b,v,k,j,t] ; 
-    for(t in (HI+1):T_Q) pMO[b,v,k,j,(t+1)] += (1 - rhoT[k] * gammaT[k] * RR_symp_Q[1,v,k,j,(t-HI)]) * (1- lambda[k,(t-HI)]) * pSN[b,v,j,(t-HI)] ;
+    for(t in 1:T_Q) pMO[b,v,k,j,(t+1)] = lambda[1,j,t]*lambda[2,j,t]*lambda[3,j,t]*lambda[4,j,t]/lambda[k,j,t]* pMO[b,v,k,j,t] ; 
+    for(t in (HI+1):T_Q) pMO[b,v,k,j,(t+1)] += (1 - rhoT[k] * gammaT[k] * RR_symp_Q[1,v,k,j,(t-HI)]) * (1- lambda[k,j,(t-HI)]) * pSN[b,v,j,(t-HI)] ;
     }  
    
 for(b in 1:B)
@@ -1052,31 +1130,31 @@ for(b in 1:B)
    for(j in 1:J_Q) {
       for(t in 1:T_Q){
           // MU_12
-          pMU2[b,v,1,j,(t+1)] = lambda[3,t] * lambda[4,t] *  pMU2[b,v,1,j,t] ; 
+          pMU2[b,v,1,j,(t+1)] = lambda[3,j,t] * lambda[4,j,t] *  pMU2[b,v,1,j,t] ; 
            // MU_13
-          pMU2[b,v,2,j,(t+1)] = lambda[2,t] * lambda[4,t] *  pMU2[b,v,2,j,t] ; 
+          pMU2[b,v,2,j,(t+1)] = lambda[2,j,t] * lambda[4,j,t] *  pMU2[b,v,2,j,t] ; 
            // MU_14
-          pMU2[b,v,3,j,(t+1)] = lambda[2,t] * lambda[3,t] *  pMU2[b,v,3,j,t] ; 
+          pMU2[b,v,3,j,(t+1)] = lambda[2,j,t] * lambda[3,j,t] *  pMU2[b,v,3,j,t] ; 
           // MU_23
-          pMU2[b,v,4,j,(t+1)] = lambda[1,t] * lambda[4,t] *  pMU2[b,v,4,j,t] ; 
+          pMU2[b,v,4,j,(t+1)] = lambda[1,j,t] * lambda[4,j,t] *  pMU2[b,v,4,j,t] ; 
           // MU_24
-          pMU2[b,v,5,j,(t+1)] = lambda[1,t] * lambda[3,t] *  pMU2[b,v,5,j,t] ; 
+          pMU2[b,v,5,j,(t+1)] = lambda[1,j,t] * lambda[3,j,t] *  pMU2[b,v,5,j,t] ; 
           // MU_34
-          pMU2[b,v,6,j,(t+1)] = lambda[1,t] * lambda[2,t] *  pMU2[b,v,6,j,t] ; 
+          pMU2[b,v,6,j,(t+1)] = lambda[1,j,t] * lambda[2,j,t] *  pMU2[b,v,6,j,t] ; 
       }
       for(t in (HI+1):T_Q) {
           // MU_12
-          pMU2[b,v,1,j,(t+1)] +=  (1 -  rhoT[1] * RR_symp_Q[2,v,1,j,(t-HI)]) * (1-lambda[1,(t-HI)]) * pMO[b,v,2,j,(t-HI)] + (1 -  rhoT[2] * RR_symp_Q[2,v,2,j,(t-HI)]) * (1-lambda[2,(t-HI)]) * pMO[b,v,1,j,(t-HI)] ;
+          pMU2[b,v,1,j,(t+1)] +=  (1 -  rhoT[1] * RR_symp_Q[2,v,1,j,(t-HI)]) * (1-lambda[1,j,(t-HI)]) * pMO[b,v,2,j,(t-HI)] + (1 -  rhoT[2] * RR_symp_Q[2,v,2,j,(t-HI)]) * (1-lambda[2,j,(t-HI)]) * pMO[b,v,1,j,(t-HI)] ;
           // MU_13
-          pMU2[b,v,2,j,(t+1)] +=  (1 -  rhoT[1] * RR_symp_Q[2,v,1,j,(t-HI)]) * (1-lambda[1,(t-HI)]) * pMO[b,v,3,j,(t-HI)] + (1 - rhoT[3] * RR_symp_Q[2,v,3,j,(t-HI)]) * (1-lambda[3,(t-HI)]) * pMO[b,v,1,j,(t-HI)] ;
+          pMU2[b,v,2,j,(t+1)] +=  (1 -  rhoT[1] * RR_symp_Q[2,v,1,j,(t-HI)]) * (1-lambda[1,j,(t-HI)]) * pMO[b,v,3,j,(t-HI)] + (1 - rhoT[3] * RR_symp_Q[2,v,3,j,(t-HI)]) * (1-lambda[3,j,(t-HI)]) * pMO[b,v,1,j,(t-HI)] ;
           // MU_14
-          pMU2[b,v,3,j,(t+1)] +=  (1 -  rhoT[1] * RR_symp_Q[2,v,1,j,(t-HI)]) * (1-lambda[1,(t-HI)]) * pMO[b,v,4,j,(t-HI)] + (1 -  rhoT[4] * RR_symp_Q[2,v,4,j,(t-HI)]) * (1-lambda[4,(t-HI)]) * pMO[b,v,1,j,(t-HI)] ;
+          pMU2[b,v,3,j,(t+1)] +=  (1 -  rhoT[1] * RR_symp_Q[2,v,1,j,(t-HI)]) * (1-lambda[1,j,(t-HI)]) * pMO[b,v,4,j,(t-HI)] + (1 -  rhoT[4] * RR_symp_Q[2,v,4,j,(t-HI)]) * (1-lambda[4,j,(t-HI)]) * pMO[b,v,1,j,(t-HI)] ;
           // MU_23
-          pMU2[b,v,4,j,(t+1)] +=  (1 - rhoT[2] * RR_symp_Q[2,v,2,j,(t-HI)]) * (1-lambda[2,(t-HI)]) * pMO[b,v,3,j,(t-HI)] + (1 - rhoT[3] * RR_symp_Q[2,v,3,j,(t-HI)]) * (1-lambda[3,(t-HI)]) * pMO[b,v,2,j,(t-HI)] ;
+          pMU2[b,v,4,j,(t+1)] +=  (1 - rhoT[2] * RR_symp_Q[2,v,2,j,(t-HI)]) * (1-lambda[2,j,(t-HI)]) * pMO[b,v,3,j,(t-HI)] + (1 - rhoT[3] * RR_symp_Q[2,v,3,j,(t-HI)]) * (1-lambda[3,j,(t-HI)]) * pMO[b,v,2,j,(t-HI)] ;
           // MU_24
-          pMU2[b,v,5,j,(t+1)] +=  (1 -  rhoT[2] * RR_symp_Q[2,v,2,j,(t-HI)]) * (1-lambda[2,(t-HI)]) * pMO[b,v,4,j,(t-HI)] + (1 -  rhoT[4] * RR_symp_Q[2,v,4,j,(t-HI)]) * (1-lambda[4,(t-HI)]) * pMO[b,v,2,j,(t-HI)] ;
+          pMU2[b,v,5,j,(t+1)] +=  (1 -  rhoT[2] * RR_symp_Q[2,v,2,j,(t-HI)]) * (1-lambda[2,j,(t-HI)]) * pMO[b,v,4,j,(t-HI)] + (1 -  rhoT[4] * RR_symp_Q[2,v,4,j,(t-HI)]) * (1-lambda[4,j,(t-HI)]) * pMO[b,v,2,j,(t-HI)] ;
           // MU_34
-          pMU2[b,v,6,j,(t+1)] +=  (1 - rhoT[3] * RR_symp_Q[2,v,3,j,(t-HI)]) * (1-lambda[3,(t-HI)]) * pMO[b,v,4,j,(t-HI)] + (1 - rhoT[4] * RR_symp_Q[2,v,4,j,(t-HI)]) * (1-lambda[4,(t-HI)]) * pMO[b,v,3,j,(t-HI)] ;
+          pMU2[b,v,6,j,(t+1)] +=  (1 - rhoT[3] * RR_symp_Q[2,v,3,j,(t-HI)]) * (1-lambda[3,j,(t-HI)]) * pMO[b,v,4,j,(t-HI)] + (1 - rhoT[4] * RR_symp_Q[2,v,4,j,(t-HI)]) * (1-lambda[4,j,(t-HI)]) * pMO[b,v,3,j,(t-HI)] ;
         }}
 
 for(b in 1:B)
@@ -1084,23 +1162,23 @@ for(b in 1:B)
    for(j in 1:J_Q){
      for(t in 1:T_Q){ 
         // MU3 -1 
-        pMU3[b,v,1,j,(t+1)] = lambda[1,t]  *  pMU3[b,v,1,j,t] ; 
+        pMU3[b,v,1,j,(t+1)] = lambda[1,j,t]  *  pMU3[b,v,1,j,t] ; 
         // MU3 -2 
-        pMU3[b,v,2,j,(t+1)] = lambda[2,t]  *  pMU3[b,v,2,j,t] ; 
+        pMU3[b,v,2,j,(t+1)] = lambda[2,j,t]  *  pMU3[b,v,2,j,t] ; 
         // MU3 -3
-        pMU3[b,v,3,j,(t+1)] = lambda[3,t]  *  pMU3[b,v,3,j,t] ; 
+        pMU3[b,v,3,j,(t+1)] = lambda[3,j,t]  *  pMU3[b,v,3,j,t] ; 
         // MU3 -4
-        pMU3[b,v,4,j,(t+1)] = lambda[4,t]  *  pMU3[b,v,4,j,t] ; 
+        pMU3[b,v,4,j,(t+1)] = lambda[4,j,t]  *  pMU3[b,v,4,j,t] ; 
      }
      for(t in (HI+1):T_Q) {
         // MU3 -1 
-        pMU3[b,v,1,j,(t+1)] += (1 - phiT[4] * rhoT[4] * gammaT[4] *  RR_symp_Q[3,v,4,j,(t-HI)]) * (1-lambda[4,(t-HI)]) * pMU2[b,v,4,j,(t-HI)] + (1 - phiT[3] * rhoT[3] * gammaT[3] *  RR_symp_Q[3,v,3,j,(t-HI)]) * (1-lambda[3,(t-HI)]) * pMU2[b,v,5,j,(t-HI)] + (1 - phiT[2] * rhoT[2] *gammaT[2] *  RR_symp_Q[3,v,2,j,(t-HI)]) * (1-lambda[2,(t-HI)]) * pMU2[b,v,6,j,(t-HI)] ; 
+        pMU3[b,v,1,j,(t+1)] += (1 - phiT[4] * rhoT[4] * gammaT[4] *  RR_symp_Q[3,v,4,j,(t-HI)]) * (1-lambda[4,j,(t-HI)]) * pMU2[b,v,4,j,(t-HI)] + (1 - phiT[3] * rhoT[3] * gammaT[3] *  RR_symp_Q[3,v,3,j,(t-HI)]) * (1-lambda[3,j,(t-HI)]) * pMU2[b,v,5,j,(t-HI)] + (1 - phiT[2] * rhoT[2] *gammaT[2] *  RR_symp_Q[3,v,2,j,(t-HI)]) * (1-lambda[2,j,(t-HI)]) * pMU2[b,v,6,j,(t-HI)] ; 
         // MU3 -2 
-        pMU3[b,v,2,j,(t+1)] += (1 - phiT[4] * rhoT[4] *gammaT[4] *  RR_symp_Q[3,v,4,j,(t-HI)]) * (1-lambda[4,(t-HI)]) * pMU2[b,v,2,j,(t-HI)] + (1 - phiT[3] * rhoT[3] * gammaT[3] *  RR_symp_Q[3,v,3,j,(t-HI)]) * (1-lambda[3,(t-HI)]) * pMU2[b,v,3,j,(t-HI)] + (1 - phiT[1] * rhoT[1] *gammaT[1] *  RR_symp_Q[3,v,1,j,(t-HI)]) * (1-lambda[1,(t-HI)]) * pMU2[b,v,6,j,(t-HI)] ; 
+        pMU3[b,v,2,j,(t+1)] += (1 - phiT[4] * rhoT[4] *gammaT[4] *  RR_symp_Q[3,v,4,j,(t-HI)]) * (1-lambda[4,j,(t-HI)]) * pMU2[b,v,2,j,(t-HI)] + (1 - phiT[3] * rhoT[3] * gammaT[3] *  RR_symp_Q[3,v,3,j,(t-HI)]) * (1-lambda[3,j,(t-HI)]) * pMU2[b,v,3,j,(t-HI)] + (1 - phiT[1] * rhoT[1] *gammaT[1] *  RR_symp_Q[3,v,1,j,(t-HI)]) * (1-lambda[1,j,(t-HI)]) * pMU2[b,v,6,j,(t-HI)] ; 
         // MU3 -3
-        pMU3[b,v,3,j,(t+1)] += (1 - phiT[4] * rhoT[4] *gammaT[4] *  RR_symp_Q[3,v,4,j,(t-HI)]) * (1-lambda[4,(t-HI)]) * pMU2[b,v,1,j,(t-HI)] + (1 - phiT[2] * rhoT[2] * gammaT[2] *  RR_symp_Q[3,v,2,j,(t-HI)]) * (1-lambda[2,(t-HI)]) * pMU2[b,v,3,j,(t-HI)] + (1 - phiT[1] * rhoT[1] *gammaT[1] *  RR_symp_Q[3,v,1,j,(t-HI)]) * (1-lambda[1,(t-HI)]) * pMU2[b,v,5,j,(t-HI)] ;  
+        pMU3[b,v,3,j,(t+1)] += (1 - phiT[4] * rhoT[4] *gammaT[4] *  RR_symp_Q[3,v,4,j,(t-HI)]) * (1-lambda[4,j,(t-HI)]) * pMU2[b,v,1,j,(t-HI)] + (1 - phiT[2] * rhoT[2] * gammaT[2] *  RR_symp_Q[3,v,2,j,(t-HI)]) * (1-lambda[2,j,(t-HI)]) * pMU2[b,v,3,j,(t-HI)] + (1 - phiT[1] * rhoT[1] *gammaT[1] *  RR_symp_Q[3,v,1,j,(t-HI)]) * (1-lambda[1,j,(t-HI)]) * pMU2[b,v,5,j,(t-HI)] ;  
         // MU3 -4
-        pMU3[b,v,4,j,(t+1)] += (1 - phiT[3] * rhoT[3] *gammaT[3] *  RR_symp_Q[3,v,3,j,(t-HI)]) * (1-lambda[3,(t-HI)]) * pMU2[b,v,1,j,(t-HI)] + (1 - phiT[2] * rhoT[2] * gammaT[2] *  RR_symp_Q[3,v,2,j,(t-HI)]) * (1-lambda[2,(t-HI)]) * pMU2[b,v,2,j,(t-HI)] + (1 - phiT[1] * rhoT[1] *gammaT[1] *  RR_symp_Q[3,v,1,j,(t-HI)]) * (1-lambda[1,(t-HI)]) * pMU2[b,v,4,j,(t-HI)] ;  
+        pMU3[b,v,4,j,(t+1)] += (1 - phiT[3] * rhoT[3] *gammaT[3] *  RR_symp_Q[3,v,3,j,(t-HI)]) * (1-lambda[3,j,(t-HI)]) * pMU2[b,v,1,j,(t-HI)] + (1 - phiT[2] * rhoT[2] * gammaT[2] *  RR_symp_Q[3,v,2,j,(t-HI)]) * (1-lambda[2,j,(t-HI)]) * pMU2[b,v,2,j,(t-HI)] + (1 - phiT[1] * rhoT[1] *gammaT[1] *  RR_symp_Q[3,v,1,j,(t-HI)]) * (1-lambda[1,j,(t-HI)]) * pMU2[b,v,4,j,(t-HI)] ;  
       }
     }  
 
@@ -1109,15 +1187,15 @@ for(b in 1:B)
   for(v in 1:V)
     for(j in 1:J_Q) {
       for(t in 1:T_Q){
-         Inc3[b,v,1,j,t] = (1 - lambda[1,t]) * (pMU2[b,v,4,j,t] + pMU2[b,v,5,j,t] + pMU2[b,v,6,j,t]);  
-         Inc3[b,v,2,j,t] = (1 - lambda[2,t]) * (pMU2[b,v,2,j,t] + pMU2[b,v,3,j,t] + pMU2[b,v,6,j,t]);  
-         Inc3[b,v,3,j,t] = (1 - lambda[3,t]) * (pMU2[b,v,1,j,t] + pMU2[b,v,3,j,t] + pMU2[b,v,5,j,t]);  
-         Inc3[b,v,4,j,t] = (1 - lambda[4,t]) * (pMU2[b,v,1,j,t] + pMU2[b,v,2,j,t] + pMU2[b,v,4,j,t]);
+         Inc3[b,v,1,j,t] = (1 - lambda[1,j,t]) * (pMU2[b,v,4,j,t] + pMU2[b,v,5,j,t] + pMU2[b,v,6,j,t]);  
+         Inc3[b,v,2,j,t] = (1 - lambda[2,j,t]) * (pMU2[b,v,2,j,t] + pMU2[b,v,3,j,t] + pMU2[b,v,6,j,t]);  
+         Inc3[b,v,3,j,t] = (1 - lambda[3,j,t]) * (pMU2[b,v,1,j,t] + pMU2[b,v,3,j,t] + pMU2[b,v,5,j,t]);  
+         Inc3[b,v,4,j,t] = (1 - lambda[4,j,t]) * (pMU2[b,v,1,j,t] + pMU2[b,v,2,j,t] + pMU2[b,v,4,j,t]);
          
          for(k in 1:K){
-           Inc1[b,v,k,j,t] = (1 - lambda[k,t]) * pSN[b,v,j,t]; 
-           Inc2[b,v,k,j,t] = (1 - lambda[k,t]) * (sum(pMO[b,v, ,j,t]) - pMO[b,v,k,j,t]);
-           Inc4[b,v,k,j,t] = (1 - lambda[k,t]) * pMU3[b,v,k,j,t];  
+           Inc1[b,v,k,j,t] = (1 - lambda[k,j,t]) * pSN[b,v,j,t]; 
+           Inc2[b,v,k,j,t] = (1 - lambda[k,j,t]) * (sum(pMO[b,v, ,j,t]) - pMO[b,v,k,j,t]);
+           Inc4[b,v,k,j,t] = (1 - lambda[k,j,t]) * pMU3[b,v,k,j,t];  
            D1[b,v,k,j,t]  = Inc1[b,v,k,j,t] * rhoT[k] *gammaT[k] * RR_symp_Q[1,v,k,j,t] ;
            D2[b,v,k,j,t]  = Inc2[b,v,k,j,t] * rhoT[k] * RR_symp_Q[2,v,k,j,t];
            D34[b,v,k,j,t] = (Inc3[b,v,k,j,t] + Inc4[b,v,k,j,t]) * gammaT[k] * rhoT[k] * phiT[k] * RR_symp_Q[3,v,k,j,t];  
@@ -1163,98 +1241,62 @@ for(b in 1:B)
    }
 
 
-for(v in 1:V)
- for(j in 1:J_Q)
-  for(d in 1:(D_Q-1)) 
-    pop_VJD[v,j,d] = sum(pop_Q[ ,v,j,d]) ; // pop not by serostatus 
-
 // Cases 
-for(j in 1:J_Q) {
-   for(b in 1:B) {
-    for(v in 1:V) {
-     for(k in 1:K) {
-       for(d in 1:(D_Q-1)) {
-          C_BVKJRD_Q[b,v,k,j,1,d] = Di[b,v,k,j,d] * pop_VJD[v,j,d]; // VCD up to month 48
-        }
-      }
-          C_BVJ5[b,v,j] = sum(C_BVKJRD_Q[b,v, ,j,1,5]) ;
-    }
-    C_BJ5[b,j] = sum(C_BVJ5[b, ,j]);
-  }
-  C_J5[j] = sum(C_BJ5[ ,j]);
-}
-
-real s_C_J5 = sum(C_J5);
-
-for(j in 1:J_Q) {
- pJ_VCD[j] = C_J5[j] / s_C_J5 ;
- 
- for(v in 1:V) {
-   for(b in 1:B) {
-     for(d in 1:(D_Q-1)) {
-       pop_BVJD_Q[b,v,j,d] = pop_Q[b,v,j,d]  ; // editable population 
-     }
-     pop_BVJD_Q[b,v,j,6] = pop_Q[b,v,j,6] - (N_VCD_BV5_Q[b,v] * pJ_VCD[j])  ; // censor population 
-   }
-   
-   pop_VJD[v,j,6] = sum(pop_BVJD_Q[ ,v,j,6]) ; // pop not by serostatus
-   
-   for(b in 1:B) {
-      for(k in 1:K) {
-        C_BVKJRD_Q[b,v,k,j,1,6] = Di[b,v,k,j,6] * pop_VJD[v,j,6];  // VCD at 54 months
-      }
-    }
-  }
-}
-
-for (j in 1:J_Q) {
-  for (k in 1:K) {
-    for (v in 1:V) {
-      for (b in 1:B) {
-        for (d in 1:D_Q) {
-          C_BVKJRD_Q[b, v, k, j, 2, d] = H[b, v, k, j, d] * pop_VJD[v, j, d]; // hosp
+  for(j in 1:J_Q) 
+   for(b in 1:B) 
+    for(v in 1:V) 
+     for(k in 1:K) 
+       for(d in 1:D_Q) {
+          C_BVKJRD_Q[b,v,k,j,1,d] = Di[b,v,k,j,d] * sum(pop_Q[ ,v,j,d]); 
+          C_BVKJRD_Q[b,v,k,j,2,d] = H[b,v,k,j,d]  * sum(pop_Q[ ,v,j,d]); 
         }
 
-        for (r in 1:R) {
+
+   for(b in 1:B) 
+    for(v in 1:V) 
+     for(k in 1:K)
+      for(j in 1:J_Q) 
+       for (r in 1:R) {
           C_BVKJR4[b, v, k, j, r, 1] = sum(C_BVKJRD_Q[b, v, k, j, r, 1:3]); // aggregate 1:24 months for hosp
 
-          for (d in 2:4) {
-            C_BVKJR4[b, v, k, j, r, d] = C_BVKJRD_Q[b, v, k, j, r, (d + 2)]; 
+          for (d in 2:4)   C_BVKJR4[b, v, k, j, r, d] = C_BVKJRD_Q[b, v, k, j, r, (d + 2)]; 
             // 1 is 1:24, 2 is 36 (4), 3 is 48 (5), 4 is 54 (6)
           }
-        }
-      }
-    }
-  
-  
-  for(r in 1:R)
-   for(d in 1:D_Q) {
-     for(v in 1:V) C_VKJRD[v,k,j,r,d] = sum(C_BVKJRD_Q[ ,v,k,j,r,d]); 
-     C_KJRD_Q[k,j,r,d] = sum(C_VKJRD[ ,k,j,r,d]) ; 
-   }
- }
- 
- for(r in 1:R)
-  for(d in 1:D_Q)
-    C_JRD[j,r,d] = sum(C_KJRD_Q[ ,j,r,d]);
-}
-
-
-for(r in 1:R)
- for(d in 1:D_Q)
-  C_RD[r,d] = sum(C_JRD[ ,r,d]) ; 
+        
+      
+    for(v in 1:V) 
+     for(k in 1:K)
+      for(j in 1:J_Q)   
+       for(r in 1:R)
+        for(d in 1:D_Q)  C_VKJRD[v,k,j,r,d] = sum(C_BVKJRD_Q[ ,v,k,j,r,d]); 
+       
+     for(k in 1:K)
+      for(j in 1:J_Q)   
+       for(r in 1:R)
+        for(d in 1:D_Q) C_KJRD_Q[k,j,r,d] = sum(C_VKJRD[ ,k,j,r,d]) ; 
+     
+     for(j in 1:J_Q)   
+      for(r in 1:R)
+       for(d in 1:D_Q) C_JRD[j,r,d] = sum(C_KJRD_Q[ ,j,r,d]);
+       
+       for(r in 1:R)
+       for(d in 1:D_Q)  C_RD[r,d] = sum(C_JRD[ ,r,d]) ; 
 
 
 for(b in 1:B)
  for(v in 1:V)
-  for(r in 1:R) {
-   for(k in 1:K)
-    for(d in 1:D_Q)
-     pC_BVKRD[b,v,k,r,d] = (sum(C_BVKJRD_Q[b,v,k, ,r,d])) / C_RD[r,d];
-   for(j in 1:J_Q)
-    for(a in 1:A)
-     pC_BVJRA[b,v,j,r,a] = sum(C_BVKJRD_Q[b,v, ,j,r,a]) / C_RD[r,a];
+  for(r in 1:R)
+   for(d in 1:D_Q){
+   for(k in 1:K)   pC_BVKRD[b,v,k,r,d] = sum(C_BVKJRD_Q[b,v,k, ,r,d]) / C_RD[r,d];
+   for(j in 1:J_Q) pC_BVJRD[b,v,j,r,d] = sum(C_BVKJRD_Q[b,v, ,j,r,d]) / C_RD[r,d];
   }
+  
+for(b in 1:B)
+ for(v in 1:V)
+  for(k in 1:K)   
+   for(j in 1:J_Q)
+    for(r in 1:R) pC_BVKJR[b,v,k,j,r] = sum(C_BVKJRD_Q[b,v,k,j,r, ]) / sum(C_RD[r, ]);
+  
 
 // sum over year 2 for serotype and age cases
  for(k in 1:K)
@@ -1304,16 +1346,63 @@ for(k in 1:K)
  }
 
 for(j in 1:J_Q)
-  for(a in 1:A){
-   pD_BVJA_Q[j,a]     =  pC_BVJRA[1,1,j,1,a];
-   pD_BVJA_Q[j+3,a]   =  pC_BVJRA[1,2,j,1,a];
-   pD_BVJA_Q[j+6,a]   =  pC_BVJRA[2,1,j,1,a];
-   pD_BVJA_Q[j+9,a]   =  pC_BVJRA[2,2,j,1,a];
-   pH_BVJA_Q[j,a]     =  pC_BVJRA[1,1,j,2,a];
-   pH_BVJA_Q[j+3,a]   =  pC_BVJRA[1,2,j,2,a];
-   pH_BVJA_Q[j+6,a]   =  pC_BVJRA[2,1,j,2,a];
-   pH_BVJA_Q[j+9,a]   =  pC_BVJRA[2,2,j,2,a];
+  for(d in 1:D_Q){
+   pD_BVJD_Q[j,d]     =  pC_BVJRD[1,1,j,1,d];
+   pD_BVJD_Q[j+3,d]   =  pC_BVJRD[1,2,j,1,d];
+   pD_BVJD_Q[j+6,d]   =  pC_BVJRD[2,1,j,1,d];
+   pD_BVJD_Q[j+9,d]   =  pC_BVJRD[2,2,j,1,d];
+   pH_BVJD_Q[j,d]     =  pC_BVJRD[1,1,j,2,d];
+   pH_BVJD_Q[j+3,d]   =  pC_BVJRD[1,2,j,2,d];
+   pH_BVJD_Q[j+6,d]   =  pC_BVJRD[2,1,j,2,d];
+   pH_BVJD_Q[j+9,d]   =  pC_BVJRD[2,2,j,2,d];
  }
+
+for(j in 1:J_Q)
+  for(d in 1:D_Q){
+   pD_BVKJ_Q[j]      =  pC_BVKJR[1,1,1,j,1];
+   pD_BVKJ_Q[j+3]    =  pC_BVKJR[1,1,2,j,1];
+   pD_BVKJ_Q[j+6]    =  pC_BVKJR[1,1,3,j,1];
+   pD_BVKJ_Q[j+9]    =  pC_BVKJR[1,1,4,j,1];
+   
+   pD_BVKJ_Q[j+12]   =  pC_BVKJR[1,2,1,j,1];
+   pD_BVKJ_Q[j+15]   =  pC_BVKJR[1,2,2,j,1];
+   pD_BVKJ_Q[j+18]   =  pC_BVKJR[1,2,3,j,1];
+   pD_BVKJ_Q[j+21]   =  pC_BVKJR[1,2,4,j,1];
+   
+   pD_BVKJ_Q[j+24]   =  pC_BVKJR[2,1,1,j,1];
+   pD_BVKJ_Q[j+27]   =  pC_BVKJR[2,1,2,j,1];
+   pD_BVKJ_Q[j+30]   =  pC_BVKJR[2,1,3,j,1];
+   pD_BVKJ_Q[j+33]   =  pC_BVKJR[2,1,4,j,1];
+   
+   pD_BVKJ_Q[j+36]   =  pC_BVKJR[2,2,1,j,1];
+   pD_BVKJ_Q[j+39]   =  pC_BVKJR[2,2,2,j,1];
+   pD_BVKJ_Q[j+42]   =  pC_BVKJR[2,2,3,j,1];
+   pD_BVKJ_Q[j+45]   =  pC_BVKJR[2,2,4,j,1];
+  
+   pH_BVKJ_Q[j]     =  pC_BVKJR[1,1,1,j,2];
+   pH_BVKJ_Q[j+3]   =  pC_BVKJR[1,1,2,j,2];
+   pH_BVKJ_Q[j+6]   =  pC_BVKJR[1,1,3,j,2];
+   pH_BVKJ_Q[j+9]   =  pC_BVKJR[1,1,4,j,2];
+   
+   pH_BVKJ_Q[j+12]  =  pC_BVKJR[1,2,1,j,2];
+   pH_BVKJ_Q[j+15]  =  pC_BVKJR[1,2,2,j,2];
+   pH_BVKJ_Q[j+18]  =  pC_BVKJR[1,2,3,j,2];
+   pH_BVKJ_Q[j+21]  =  pC_BVKJR[1,2,4,j,2];
+   
+   pH_BVKJ_Q[j+24]  =  pC_BVKJR[2,1,1,j,2];
+   pH_BVKJ_Q[j+27]  =  pC_BVKJR[2,1,2,j,2];
+   pH_BVKJ_Q[j+30]  =  pC_BVKJR[2,1,3,j,2];
+   pH_BVKJ_Q[j+33]  =  pC_BVKJR[2,1,4,j,2];
+   
+   pH_BVKJ_Q[j+36]  =  pC_BVKJR[2,2,1,j,2];
+   pH_BVKJ_Q[j+39]  =  pC_BVKJR[2,2,2,j,2];
+   pH_BVKJ_Q[j+42]  =  pC_BVKJR[2,2,3,j,2];
+   pH_BVKJ_Q[j+45]  =  pC_BVKJR[2,2,4,j,2];
+ }
+ 
+
+ 
+
 
 for(d in 1:D_Q)
  for(r in 1:R)
@@ -1327,16 +1416,14 @@ for(d in 1:D_Q)
  ll_Q += binomial_lpmf(HOSP_D_Q | pop_D_Q, pC_RD_Q[2,]);
 
 
-   ll_Q +=  multinomial_lpmf(VCD_BVKD_Q[ ,1] | pD_BVKD_Q[ ,1]);
-  for(d in 2:D_Q)   ll_Q += multinomial_lpmf(VCD_BVKD_Q[ ,d] | pD_BVKD_Q[ ,d]);
-
-
- for(a in 1:A)    ll_Q += multinomial_lpmf(VCD_BVJA_Q[ ,a] | pD_BVJA_Q[ ,a]) ;
- for(d in 1:2)    ll_Q += multinomial_lpmf(VCD_KJ2_Q[ ,d]  | pD_KJ2_Q[ ,d]) ;
+for (d in 1:D_Q) ll_Q += multinomial_lpmf(VCD_BVKD_Q[, d] | pD_BVKD_Q[, d]);
+ for(d in 1:D_Q)  ll_Q += multinomial_lpmf(VCD_BVJD_Q[ ,d]  | pD_BVJD_Q[ ,d]) ;
+ for(d in 1:2)    ll_Q += multinomial_lpmf(VCD_KJ2_Q[ ,d]   | pD_KJ2_Q[ ,d]) ;
+ ll_Q += multinomial_lpmf(VCD_BVKJ_Q | pD_BVKJ_Q);
  for(d in 1:4)    ll_Q += multinomial_lpmf(HOSP_BVK4_Q[ ,d] | pH_BVK4_Q[ ,d]);
- for(a in 1:A)    ll_Q += multinomial_lpmf(HOSP_BVJA_Q[ ,a] | pH_BVJA_Q[ ,a]) ;
+ for(d in 1:D_Q)  ll_Q += multinomial_lpmf(HOSP_BVJD_Q[ ,d] | pH_BVJD_Q[ ,d]) ;
  for(d in 1:2)    ll_Q += multinomial_lpmf(HOSP_KJ2_Q[ ,d]  | pH_KJ2_Q[ ,d]) ;
-
+  ll_Q += multinomial_lpmf(HOSP_BVKJ_Q | pH_BVKJ_Q);
 }
 
 // ######################## DENGVAXIA BLOCK  ###################################
@@ -1553,6 +1640,10 @@ for(k in 1:K)
          e_alpha[c,k] = exp(-alpha[1,k]);  // serotype outcome offset 
          }}      
          }
+
+// age, serotype, serostatus specific titres 
+if(mono_lc == 0){    
+      
         
 if(mono_lc_SN == 1){ // SN, oldest, symp 
   for(k in 1:K) nc50[1,k,2,1] = exp(lc[2,1,1]); // single 
@@ -1580,8 +1671,14 @@ if(mono_lc_MU == 1){ // MU, oldest, symp
       }
 }
 
-// MO, oldest, symp
+
+// MO, oldest
+if(mono_lc_MO == 1){
+for(k in 1:K)  nc50[2,k,2,1] = exp(lc[2,2,1]); // MO, serotype, oldest, symp
+} else{
 for(k in 1:K)  nc50[2,k,2,1] = exp(lc[2,2,k]); // MO, serotype, oldest, symp
+}
+
 
 // age group offsets 
 if(include_beta[2] == 1){ // youngest same for both outcomes 
@@ -1595,6 +1692,13 @@ if(include_beta[2] == 1){ // youngest same for both outcomes
    nc50[c,k,1,1] = nc50[c,k,2,1];
   }
 }
+
+} else {
+  for(c in 1:C) 
+   for(k in 1:K) 
+    for(j in 1:J_De)  nc50[c,k,j,1] = exp(lc[2,1,1]); 
+
+}   
 
 // hosp 
 for(c in 1:C)
@@ -1966,27 +2070,27 @@ for(j in 1:2){ // age groups 1 and 2
 // Dengvaxia priors 
   lambda_D_De ~ lognormal(-7,2);
   theta ~ dirichlet(rep_vector(1.0, K));
-  lc[2,1, ] ~ normal(3.85,1);
-  for(c in 2:C)  lc[2,c, ] ~ normal(5.98,1);
+  lc[2,1, ] ~ normal(3.5,1);
+  for(c in 2:C)  lc[2,c, ] ~ normal(5.5,1);
   sens[2] ~ normal(0.94,0.05) ;
   spec[2] ~ normal(0.74,0.05) ;
-  hs[2,1] ~ normal(2.93,0.5); // SN
-  hs[2,2] ~ normal(20.0,0.5); // SP
+  hs[2,1] ~ normal(0.54,0.5); // SN
+  hs[2,2] ~ normal(33.36,0.5); // SP
   hl[2] ~  normal(84,12); // fits plus https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7557381/
-  ts[2,1] ~ normal(1.34,0.5) ;
-  ts[2,2] ~ normal(1.34,0.5) ;
+  ts[2,1] ~ normal(-0.21,0.5) ;
+  ts[2,2] ~ normal(1.96,0.5) ;
   
 // Butantan-DV
-  lc[3,1,] ~ normal(5.18,1);
-  for(c in 2:C)  lc[3,c,] ~ normal(6.27,1);
-  lambda_K_Bu ~ lognormal(-7,2);
+  lc[3,1,] ~ normal(5,1);
+  for(c in 2:C)  lc[3,c,] ~ normal(6.5,1);
+  for(k in 1:2) lambda_KD_Bu[k, ]  ~ lognormal(-7,2);
   sens[3] ~ normal(0.9,0.05) ;
   spec[3] ~ normal(0.995, 0.01) ;
-  hs[3,1] ~ normal(1.65,0.5); // SN
-  hs[3,2] ~ normal(4.20,0.5);  // SP
+  hs[3,1] ~ normal(2.38, 0.5);  // SN
+  hs[3,2] ~ normal(1.67, 0.5);  // SP
   hl[3] ~ normal(84,12); // fits plus https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7557381/
-  ts[3,1] ~ normal(-2.21,0.5) ;
-  ts[3,2] ~ normal(0.15,0.5) ;
+  ts[3,1] ~ normal(0,0.5) ;
+  ts[3,2] ~ normal(0.6,0.5) ;
 
 }
 
@@ -2003,8 +2107,8 @@ array[B, V, K, 4] real<lower=0> AR_BVKHD_Q;        // Attack rate by B, V, K, 4
 array[B, V, K, R] real<lower=0> AR_BVKR_Q;         // Attack rate by B, V, K, R
 array[B, V, J_Q, R] real<lower=0> AR_BVJR_Q;       // Attack rate by B, V, J_Q, R
 array[K, J_Q, R, 2] real<lower=0> AR_KJRD_Q;       // Attack rate by K, J_Q, R, 2
-array[B, R, D_Q] real<lower=0> AR_BRD_Q;           // Attack rate by B, R, D_Q
 array[V, R, D_Q] real<lower=0> AR_VRD_Q;           // Attack rate by V, R, D_Q
+array[B, V, K, J_Q, R] real<lower=0> AR_BVKJR_Q;   // Attack rate by B, V, K, J_Q, R
 
 // Vaccine Efficacy (VE)
 array[C, K, J_Q, R, T_Q] real<upper=1> VE_Q;       // Vaccine efficacy by C, K, J_Q, R, T_Q
@@ -2016,8 +2120,18 @@ array[C, J_Q, R, T_Q] real<upper=1> VE_BJRT_Q;     // Vaccine efficacy by C, J_Q
 // Attack Rates (AR)
 array[B, V, J_De, D_De] real<lower=0> H_AR_BVJD_De;  // Hospitalized AR by B, V, J_De, D_De
 array[B, V, K, J_De] real<lower=0> H_AR_BVKJ_De;     // Hospitalized AR by B, V, K, J_De
-array[B, V, J_De] real<lower=0> V_AR_BVJ_De;         // Vaccine-associated AR by B, V, J_De
-array[V, K] real<lower=0> V_AR_VK_De;               // Vaccine-associated AR by V, K
+array[B, V, J_De] real<lower=0> V_AR_BVJ_De;         // VCD AR by B, V, J_De
+array[V, K] real<lower=0> V_AR_VK_De;                // VCD AR by V, K
+
+array[B, V, J_De, D_De] real<lower=0> H_BVJD_De;     // Hosp count by B, V, J, D_De
+array[V, J_De, D_De] real<lower=0> H_VJD_De;            // Hosp count by V, J, D_De
+array[V, D_De] real<lower=0 > H_AR_VD_De;            // Hospitalized AR by  V, D_De
+array[B, V, J_De] real<lower=0 > H_AR_BVJ_De;        // Hospitalized AR by B, V, J
+array[B, V, K, D_De] real<lower=0 > H_BVKD_De;       // Hosp count  by B, V, K, D_De
+array[B, V, J_De] real<lower=0 > pop_HOSP_BVJ_De;    // Pop by B, V, J
+array[B, V, K] real<lower=0 > H_AR_BVK_De;           // Hospitalized AR by B, V, K
+
+
 
 // Vaccine Efficacy (VE)
 array[C, K, J_De, R, T_De] real<upper=1> VE_De;     // Vaccine efficacy by C, K, J_De, R, T_De
@@ -2025,69 +2139,181 @@ array[C, K, R, T_De] real<upper=1> VE_BKRT_De;      // Vaccine efficacy by C, K,
 array[C, J_De, R, T_De] real<upper=1> VE_BJRT_De;   // Vaccine efficacy by C, J_De, R, T_De
 
 // BUTANTAN-DV
-
+array[B,V,2,D_Bu] real<lower = 0> AR_BVKD_Bu;
+array[B,V,J_Bu,D_Bu] real<lower = 0> AR_BVJD_Bu;
+array[B,V,2,J_Bu] real<lower = 0> AR_BVKJ_Bu;
 array[B,V,2] real<lower = 0> AR_BVK_Bu;
 array[B,V,J_Bu] real<lower = 0> AR_BVJ_Bu;
+
+array[B,V,D_Bu] real<lower = 0> pop_BVD_Bu ; 
+array[B,V,2,D_Bu] real<lower = 0> V_BVKD_Bu;
+array[B,V,J_Bu,D_Bu] real<lower = 0> V_BVJD_Bu; 
+array[B,V,D_Bu] real<lower = 0> V_BVD_Bu;
+array[V,D_Bu] real<lower = 0> AR_VD_Bu;
+
 
 // VE
 array[C,2,J_Bu,T_Bu] real<upper = 1> VE_Bu;
 
 // JOINT LOG LIKELIHOOD
-vector[J_Q+ 2*D_Q+B*V*K*D_Q+2*B*V*J_Q*A+K*J_Q*4+B*V*K*4 + 2*D_De + 3 + 3 + 6] log_lik; // plus 6 for Butantan-DV
+  vector[J_Q + D_Q + D_Q + // Q binomial 
+         D_Q + D_Q + 2 + 1 + 4 + D_Q + 2 + 1 + // Q multi
+         J_Bu + D_Bu + // Bu binomial 
+         D_Bu + D_Bu + 1 + // Bu multi
+         D_De + J_De + 1 + // De binomial 
+         D_De + 1 + 1 + 1] log_lik; // De multi 
 
  {
-// LL
-vector[J_Q] ll1; // pSP
-vector[D_Q] ll2; // C 
-vector[D_Q] ll3; // H
-vector[B*V*K*D_Q] ll4; // VCD_BVKD
-vector[B*V*J_Q*A] ll5; // VCD_BVJA
-vector[B*V*J_Q*A] ll6; // HOSP_BVJA
-vector[K*J_Q*2] ll7;   // VCD_KJ2
-vector[K*J_Q*2] ll8;   // HOSP_KJ2
-vector[B*V*K*4] ll9;   // HOSP_BVK4
-vector[J_Q] p_tmp1;    
-vector[D_Q] p_tmp2;
+  int pos = 1;
+  int sz;
+  
+  
+  // ============================================================
+  // BLOCK Q
+  // ============================================================
 
-p_tmp1 = to_vector(pSP_Q);
-ll1= v_SP_J_Q .* log(p_tmp1) + (v_pop_J_Q-v_SP_J_Q) .* log(1-p_tmp1);
-p_tmp2 = to_vector(pC_RD_Q[1,]);
-ll2= v_VCD_D_Q .* log(p_tmp2) + (v_pop_D_Q-v_VCD_D_Q) .* log(1-p_tmp2);
-p_tmp2 = to_vector(pC_RD_Q[2,]);
-ll3= v_HOSP_D_Q .* log(p_tmp2) + (v_pop_D_Q-v_HOSP_D_Q) .* log(1-p_tmp2);
+  // --- Binomial: seroprevalence by age-group j ---
+  sz = J_Q;
+  for (j in 1:sz)
+    log_lik[pos + j - 1] = binomial_lpmf(SP_J_Q[j] | pop_J_Q[j], pSP_Q[j]);
+  pos += sz;
 
-ll4 = to_vector(v_VCD_BVKD_Q .* log(pD_BVKD_Q));
-ll5 = to_vector(v_VCD_BVJA_Q .* log(pD_BVJA_Q));
-ll6 = to_vector(v_HOSP_BVJA_Q .* log(pH_BVJA_Q));
-ll7 = to_vector(v_VCD_KJ2_Q .* log(pD_KJ2_Q));
-ll8 = to_vector(v_HOSP_KJ2_Q .* log(pH_KJ2_Q));
-ll9 = to_vector(v_HOSP_BVK4_Q .* log(pH_BVK4_Q));
+  // --- Binomial: VCD case rate  ---
+  sz = D_Q;
+  for (d in 1:sz)
+    log_lik[pos + d - 1] = binomial_lpmf(VCD_D_Q[d] | pop_D_Q[d], pC_RD_Q[1,d]);
+  pos += sz;
 
-log_lik[1:J_Q] = ll1;
-log_lik[(J_Q+1):(J_Q+D_Q)] = ll2;
-log_lik[(J_Q+D_Q+1):(J_Q+2*D_Q)] = ll3;
-log_lik[(J_Q+2*D_Q+1):(J_Q+2*D_Q+B*V*K*D_Q)] = ll4;
-log_lik[(J_Q+2*D_Q+B*V*K*D_Q+1):(J_Q+2*D_Q+B*V*K*D_Q+B*V*J_Q*A)] = ll5;
-log_lik[(J_Q+2*D_Q+B*V*K*D_Q+B*V*J_Q*A+1):(J_Q+2*D_Q+B*V*K*D_Q+2*B*V*J_Q*A)] = ll6;
-log_lik[(J_Q+2*D_Q+B*V*K*D_Q+2*B*V*J_Q*A+1):(J_Q+2*D_Q+B*V*K*D_Q+2*B*V*J_Q*A+K*J_Q*2)] = ll7;
-log_lik[(J_Q+2*D_Q+B*V*K*D_Q+2*B*V*J_Q*A+K*J_Q*2+1):(J_Q+2*D_Q+B*V*K*D_Q+2*B*V*J_Q*A+K*J_Q*4)] = ll8;
-log_lik[(J_Q+2*D_Q+B*V*K*D_Q+2*B*V*J_Q*A+K*J_Q*4+1):(J_Q+2*D_Q+B*V*K*D_Q+2*B*V*J_Q*A+K*J_Q*4+B*V*K*4)] = ll9;
+  // --- Binomial: hospitalisation rate  ---
+  sz = D_Q;
+  for (d in 1:sz)
+    log_lik[pos + d - 1] = binomial_lpmf(HOSP_D_Q[d] | pop_D_Q[d], pC_RD_Q[2,d]);
+  pos += sz;
+
+  // --- Multinomial: VCD by B×V×K strata,  ---
+  sz = D_Q;
+  for (d in 1:sz)
+    log_lik[pos + d - 1] = multinomial_lpmf(VCD_BVKD_Q[,d] | pD_BVKD_Q[,d]);
+  pos += sz;
+
+  // --- Multinomial: VCD by B×V×J strata  ---
+  sz = D_Q;
+  for (d in 1:sz)
+    log_lik[pos + d - 1] = multinomial_lpmf(VCD_BVJD_Q[,d] | pD_BVJD_Q[,d]);
+  pos += sz;
+
+  // --- Multinomial: VCD by K×J strata ---
+  sz = 2;
+  for (d in 1:sz)
+    log_lik[pos + d - 1] = multinomial_lpmf(VCD_KJ2_Q[,d] | pD_KJ2_Q[,d]);
+  pos += sz;
+
+  // --- Multinomial: VCD by B×V×K×J ---
+  sz = 1;
+  log_lik[pos] = multinomial_lpmf(VCD_BVKJ_Q | pD_BVKJ_Q);
+  pos += sz;
+
+  // --- Multinomial: HOSP by B×V×K strata ---
+  sz = 4;
+  for (d in 1:sz)
+    log_lik[pos + d - 1] = multinomial_lpmf(HOSP_BVK4_Q[,d] | pH_BVK4_Q[,d]);
+  pos += sz;
+
+  // --- Multinomial: HOSP by B×V×J strata  ---
+  sz = D_Q;
+  for (d in 1:sz)
+    log_lik[pos + d - 1] = multinomial_lpmf(HOSP_BVJD_Q[,d] | pH_BVJD_Q[,d]);
+  pos += sz;
+
+  // --- Multinomial: HOSP by K×J strata ---
+  sz = 2;
+  for (d in 1:sz)
+    log_lik[pos + d - 1] = multinomial_lpmf(HOSP_KJ2_Q[,d] | pH_KJ2_Q[,d]);
+  pos += sz;
+
+  // --- Multinomial: HOSP by B×V×K×J ---
+  sz = 1;
+  log_lik[pos] = multinomial_lpmf(HOSP_BVKJ_Q | pH_BVKJ_Q);
+  pos += sz;
 
 
-for(d in 1:D_De) log_lik[319 + d] = binomial_lpmf(HOSP_D_De[d] | pop_HOSP_D_De[d] , pH_De[d]);
-for(d in 1:D_De) log_lik[d + D_De + 319]  = multinomial_lpmf(HOSP_BVJD_De[ ,d]  | mH_BVJD_De[ ,d]);
-log_lik[2*D_De + 1 + 319] = multinomial_lpmf(HOSP_BVKJ_De | mH_BVKJ_De);
-for(j in 1:J_De) log_lik[j + 2*D_De + 1 + 319] = binomial_lpmf(SP_J_De[j] | pop_J_De[j], pSP_De[j]);
-log_lik[2*D_De + 3 + 1 + 319] = binomial_lpmf(VCD_De | pop_VCD_De, pC_De);
-log_lik[2*D_De + 3 + 2 + 319] = multinomial_lpmf(VCD_BVJ_De | mD_BVJ_De);
-log_lik[2*D_De + 3 + 3 + 319] = multinomial_lpmf(VCD_VK_De | mD_VK_De);
+  // ============================================================
+  // BLOCK Bu
+  // ============================================================
+
+  // --- Binomial: seroprevalence by age-group j ---
+  sz = J_Bu;
+  for (j in 1:sz)
+    log_lik[pos + j - 1] = binomial_lpmf(SP_J_Bu[j] | pop_J_Bu[j], pSP_Bu[j]);
+  pos += sz;
+
+  // --- Binomial: VCD case rate  ---
+  sz = D_Bu;
+  for (d in 1:sz)
+    log_lik[pos + d - 1] = binomial_lpmf(VCD_D_Bu[d] | popD_Bu[d], pC_D_Bu[d]);
+  pos += sz;
+
+  // --- Multinomial: VCD by B×V×K strata  ---
+  sz = D_Bu;
+  for (d in 1:sz)
+    log_lik[pos + d - 1] = multinomial_lpmf(VCD_BVKD_Bu[,d] | mD_BVKD_Bu[,d]);
+  pos += sz;
+
+  // --- Multinomial: VCD by B×V×J strata  ---
+  sz = D_Bu;
+  for (d in 1:sz)
+    log_lik[pos + d - 1] = multinomial_lpmf(VCD_BVJD_Bu[,d] | mD_BVJD_Bu[,d]);
+  pos += sz;
+
+  // --- Multinomial: VCD by B×V×K×J ---
+  sz = 1;
+  log_lik[pos] = multinomial_lpmf(VCD_BVKJ_Bu | mD_BVKJ_Bu);
+  pos += sz;
+
+
+  // ============================================================
+  // BLOCK De
+  // ============================================================
+
+  // --- Binomial: hospitalisation rate  ---
+  sz = D_De;
+  for (d in 1:sz)
+    log_lik[pos + d - 1] = binomial_lpmf(HOSP_D_De[d] | pop_HOSP_D_De[d], pH_De[d]);
+  pos += sz;
+
+  // --- Multinomial: HOSP by B×V×J strata  ---
+  sz = D_De;
+  for (d in 1:sz)
+    log_lik[pos + d - 1] = multinomial_lpmf(HOSP_BVJD_De[,d] | mH_BVJD_De[,d]);
+  pos += sz;
+
+  // --- Multinomial: HOSP by B×V×K×J ---
+  sz = 1;
+  log_lik[pos] = multinomial_lpmf(HOSP_BVKJ_De | mH_BVKJ_De);
+  pos += sz;
+
+  // --- Binomial: seroprevalence by age-group j ---
+  sz = J_De;
+  for (j in 1:sz)
+    log_lik[pos + j - 1] = binomial_lpmf(SP_J_De[j] | pop_J_De[j], pSP_De[j]);
+  pos += sz;
+
+  // --- Binomial: overall VCD rate ---
+  sz = 1;
+  log_lik[pos] = binomial_lpmf(VCD_De | pop_VCD_De, pC_De);
+  pos += sz;
+
+  // --- Multinomial: VCD by B×V×J strata ---
+  sz = 1;
+  log_lik[pos] = multinomial_lpmf(VCD_BVJ_De | mD_BVJ_De);
+  pos += sz;
+
+  // --- Multinomial: VCD by V×K strata ---
+  sz = 1;
+  log_lik[pos] = multinomial_lpmf(VCD_VK_De | mD_VK_De);
+  pos += sz;
+  
 }
-
-
-for(j in 1:J_Bu) log_lik[2*D_De + 3 + 3 + 319 + j] = binomial_lpmf(SP_J_Bu[j] | pop_J_Bu[j], pSP_Bu[j]);
-log_lik[2*D_De + 3 + 3 + 319 + 4] = binomial_lpmf(VCD_Bu  | pop_Bu, pC_Bu);
-log_lik[2*D_De + 3 + 3 + 319 + 5] = multinomial_lpmf(VCD_BVK_Bu  | mD_BVK_Bu) ;
-log_lik[2*D_De + 3 + 3 + 319 + 6] = multinomial_lpmf(VCD_BVJ_Bu  | mD_BVJ_Bu) ;
 
 // ################################# QDENGA  ################################### 
 // Attack rates
@@ -2116,7 +2342,14 @@ for(b in 1:B)
   for(j in 1:J_Q)
    for(r in 1:R)
     for(d in 1:D_Q)
-     AR_BVJRD_Q[b,v,j,r,d] = C_BVJRD_Q[b,v,j,r,d] / pop_BVJD_Q[b,v,j,d];
+     AR_BVJRD_Q[b,v,j,r,d] = C_BVJRD_Q[b,v,j,r,d] / pop_Q[b,v,j,d];
+
+for(b in 1:B)
+ for(v in 1:V)
+  for(j in 1:J_Q)
+   for(r in 1:R)
+    for(d in 1:D_Q)
+     AR_BVJR_Q[b,v,j,r] = sum(C_BVJRD_Q[b,v,j,r, ]) / mean(pop_Q[b,v,j, ]);
 
 for(b in 1:B)
  for(v in 1:V)
@@ -2131,22 +2364,12 @@ for(b in 1:B)
    for(r in 1:R)
    AR_BVKR_Q[b,v,k,r] = sum(C_BVKRD_Q[b,v,k,r, ]) / pop_BV_Q[b,v] ;
 
-for(b in 1:B)
- for(v in 1:V)
-  for(j in 1:J_Q)
-   for(r in 1:R)
-    AR_BVJR_Q[b,v,j,r] = sum(C_BVJRD_Q[b,v,j,r,1:4]) / mean(pop_BVJD_Q[b,v,j,1:4]) ; // age data up to 36 months
-
 for(v in 1:V)
  for(r in 1:R)
   for(d in 1:D_Q)
    AR_VRD_Q[v,r,d] = sum(C_BVRD_Q[ ,v,r,d]) / pop_VD_Q[v,d];
 
-for(b in 1:B)
- for(r in 1:R)
-  for(d in 1:D_Q)
-   AR_BRD_Q[b,r,d] = sum(C_BVRD_Q[b, ,r,d]) / pop_BD_Q[b,d];
-  
+
   for(k in 1:K)
    for(j in 1:J_Q)
     for(r in 1:R){
@@ -2163,6 +2386,13 @@ for(b in 1:B)
     AR_BVKHD_Q[b,v,k,4] = C_BVKRD_Q[b,v,k,2,5] / pop_BVD_Q[b,v,6];
     }
     
+for(b in 1:B)
+ for(v in 1:V)
+  for(k in 1:K)
+   for(j in 1:J_Q)
+    for(r in 1:R)
+     AR_BVKJR_Q[b,v,k,j,r] = sum(C_BVKJRD_Q[b,v,k,j,r ]) / mean(pop_Q[b,v,j, ]);
+    
 // VE
 for(c in 1:C)
  for(k in 1:K)
@@ -2173,6 +2403,7 @@ for(c in 1:C)
  for(k in 1:K)
   for(j in 1:J_Q)
     for(t in 1:T_Q) VE_Q[c,k,j,2,t] = 1 - RR_hosp_Q[c,2,k,j,t] ; 
+    
 
 for(c in 1:C)
  for(k in 1:K)
@@ -2183,6 +2414,7 @@ for(c in 1:C)
  for(j in 1:J_Q)
   for(r in 1:R)
    for(t in 1:T_Q) VE_BJRT_Q[c,j,r,t] = mean(VE_Q[c, ,j,r,t]);
+   
    
 // ################################ DENGVAXIA // ###############################
 
@@ -2199,7 +2431,50 @@ for(b in 1:B)
   for(k in 1:K)
    for(j in 1:J_De)
     H_AR_BVKJ_De[b,v,k,j] = sum(Ho_BVKJD_De[b,v,k,j, ]) / mean(pop_HOSP_BVJD_De[b,v,j, ]);
+
+
+// for plot calc Dengvaxia attack rate by trial arm over time 
+for(b in 1:B)
+ for(v in 1:V)
+  for(j in 1:J_De)
+   for(d in 1:D_De)    
+H_BVJD_De[b,v,j,d] = sum(Ho_BVKJD_De[b,v, ,j,d]) ; 
+
+ for(v in 1:V)
+  for(j in 1:J_De)
+   for(d in 1:D_De)    
+H_VJD_De[v,j,d] = sum(H_BVJD_De[ ,v,j,d]) ; 
+
+ for(v in 1:V)
+  for(d in 1:D_De)    
+  H_AR_VD_De[v,d] = sum(H_VJD_De[v, ,d]) / sum(pop_HOSP_VJD_De[v, , d]); 
+  
+// for plot calc Dengvaxia attack rate by trial arm, serostatus, age 
+
+for(b in 1:B)
+ for(v in 1:V)
+  for(j in 1:J_De)
+H_AR_BVJ_De[b,v,j] = sum(H_BVJD_De[b,v,j, ]) /  mean(pop_HOSP_BVJD_De[b,v,j, ]);
+ 
+// for plot calc Dengvaxia attack rate by trial arm, serostatus, serotype 
+  
+for(b in 1:B)
+ for(v in 1:V)
+  for(k in 1:K)
+   for(d in 1:D_De)    
+H_BVKD_De[b,v,k,d] = sum(Ho_BVKJD_De[b,v,k, ,d]) ;
    
+for(b in 1:B)
+ for(v in 1:V)
+  for(j in 1:J_De)   
+ pop_HOSP_BVJ_De[b,v,j] = mean(pop_HOSP_BVJD_De[b,v,j, ]) ;   
+   
+for(b in 1:B)
+ for(v in 1:V)
+  for(k in 1:K)   
+H_AR_BVK_De[b,v,k] = sum(H_BVKD_De[b,v,k, ]) / sum(pop_HOSP_BVJ_De[b,v, ]) ; 
+
+// symp attack rates    
 for(b in 1:B)
  for(v in 1:V)
   for(j in 1:J_De)
@@ -2208,6 +2483,8 @@ for(b in 1:B)
  for(v in 1:V)
   for(k in 1:K)
    V_AR_VK_De[v,k] = sum(Sy_VKJ_De[v,k, ]) / sum(pop_VCD_VJ_De[v, ]) ; 
+
+
 
 
 // VE
@@ -2239,13 +2516,62 @@ for(c in 1:C)
 for(b in 1:B)
  for(v in 1:V)
   for(k in 1:2)
-   AR_BVK_Bu[b,v,k] = sum(Sy_BVKJ_Bu[b,v,k, ]) / sum(pop_BVJ_Bu[b,v, ]); 
+   for(d in 1:D_Bu)
+   AR_BVKD_Bu[b,v,k,d] = sum(Sy_BVKJD_Bu[b,v,k, ,d]) / sum(pop_BVJD_Bu[b,v, ,d]); 
    
 for(b in 1:B)
  for(v in 1:V)
   for(j in 1:J_Bu)
-   AR_BVJ_Bu[b,v,j] = sum(Sy_BVKJ_Bu[b,v, ,j]) / pop_BVJ_Bu[b,v,j] ; 
+   for(d in 1:D_Bu)
+   AR_BVJD_Bu[b,v,j,d] = sum(Sy_BVKJD_Bu[b,v, ,j,d]) / pop_BVJD_Bu[b,v,j,d] ; 
    
+for(b in 1:B)
+ for(v in 1:V)
+  for(k in 1:2)
+   for(j in 1:J_Bu)
+   AR_BVKJ_Bu[b,v,k,j] = sum(Sy_BVKJD_Bu[b,v,k,j, ]) / mean(pop_BVJD_Bu[b,v,j, ]) ;   
+   
+// aggregate cases for AR    
+for(b in 1:B)
+ for(v in 1:V)
+  for(k in 1:2)
+   for(d in 1:D_Bu)
+   V_BVKD_Bu[b,v,k,d] = sum(Sy_BVKJD_Bu[b,v,k, ,d]) ;
+   
+   
+for(b in 1:B)
+ for(v in 1:V)
+  for(j in 1:J_Bu)
+   for(d in 1:D_Bu)
+   V_BVJD_Bu[b,v,j,d] = sum(Sy_BVKJD_Bu[b,v, ,j,d]) ;
+   
+   
+for(b in 1:B)
+ for(v in 1:V)
+  for(d in 1:D_Bu)
+   V_BVD_Bu[b,v,d] = sum(V_BVKD_Bu[b,v, ,d]) ;
+
+for(b in 1:B)
+ for(v in 1:V)
+  for(d in 1:D_Bu)
+pop_BVD_Bu[b,v,d] = sum(pop_BVJD_Bu[b,v, ,d]) ;
+  
+// aggregated attack rates 
+ for(v in 1:V)
+  for(d in 1:D_Bu)
+   AR_VD_Bu[v,d] = sum(V_BVD_Bu[ ,v,d]) / sum(pop_BVD_Bu[ ,v,d]);
+   
+   
+for(b in 1:B)
+ for(v in 1:V)
+  for(k in 1:2)
+AR_BVK_Bu[b,v,k] = sum(V_BVKD_Bu[b,v,k, ]) / mean(pop_BVD_Bu[b,v, ]) ; 
+   
+for(b in 1:B)
+ for(v in 1:V)
+  for(j in 1:J_Bu)
+AR_BVJ_Bu[b,v,j] = sum(V_BVJD_Bu[b,v,j, ]) / mean(pop_BVJD_Bu[b,v,j, ]) ; 
+
 // VE
 for(c in 1:C)
  for(k in 1:2)

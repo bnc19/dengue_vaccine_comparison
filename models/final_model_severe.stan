@@ -2114,11 +2114,11 @@ for(j in 1:2){ // age groups 1 and 2
   for(c in 2:C)  lc[2,c, ] ~ normal(5.98,1);
   sens[2] ~ normal(0.94,0.05) ;
   spec[2] ~ normal(0.74,0.05) ;
-  hs[2,1] ~ normal(2.93,0.5); // SN
-  hs[2,2] ~ normal(20.0,0.5); // SP
+ hs[2,1] ~ normal(0.54,0.5); // SN
+  hs[2,2] ~ normal(33.36,0.5); // SP
   hl[2] ~  normal(84,12); // fits plus https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7557381/
-  ts[2,1] ~ normal(1.34,0.5) ;
-  ts[2,2] ~ normal(1.34,0.5) ;
+  ts[2,1] ~ normal(-0.21,0.5) ;
+  ts[2,2] ~ normal(1.96,0.5) ;
   psi ~ normal(0.05,0.05) ; // https://www.nature.com/articles/s41577-019-0123-x 
   
 // Butantan-DV
