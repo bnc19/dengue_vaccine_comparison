@@ -36,7 +36,7 @@ Scripts execute the full pipeline from model calibration to figure generation:
 
 - **1.fit_all_trials.R**  
   Runs the multi-trial Bayesian calibration using all vaccine datasets. The script is configured to run the final model (M4) first. Alternative model variants and sensitivity analyses are implemented via configuration flags passed to the Stan model.
-  → Outputs posterior generated quantities (attack rates, vaccine efficacy, antibody titres estimates for each vaccine - e.g., *AR_Bu.RDS*, n_Bu.*RDS* and *VE_Bu*.RDS), parameter posterior chains (*posterior_chains.csv*) and parameter posterior summarises (*posterior.csv*) in each model's output directory (e.g., *output/M4/*)
+  → Outputs posterior generated quantities (attack rates, vaccine efficacy, antibody titres estimates for each vaccine - e.g., *AR_Bu.RDS*, n_Bu.*RDS* and *VE_Bu*.RDS), parameter posterior chains (*posterior_chains.csv*) and parameter posterior summarises (*posterior.csv*) in each model's output directory (e.g., *output/M4/*).  <br>
 
 - **2.plot_all_attack_rates_scatter.R**  
   For each vaccine, joins posterior attack rate estimates to observed trial data and produces observed vs. model-estimated scatter plots. Saves a combined faceted ggplot object (by vaccine) to disk for use in the next script.  
