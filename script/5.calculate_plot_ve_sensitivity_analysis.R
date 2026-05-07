@@ -53,7 +53,6 @@ my_theme = theme_set(
       text = element_text(size = 8),
       axis.text = element_text(size = 8),
       axis.title = element_text(size = 8),
-      plot.title = element_text(size = 8, hjust = 0.5),
       plot.subtitle = element_text(size = 8),
       plot.caption = element_text(size = 8),
       legend.text = element_text(size = 8),
@@ -94,6 +93,8 @@ D_diff = calculate_diff(
   serostatus_labels = serostatus_labels
 )
 
+VE_B$outcome = 1 # only symp, to match D and Q 
+
 B_diff = calculate_diff(
   VE_B,
   age_weights = Bage_weights,
@@ -118,7 +119,7 @@ list2env(ve_out, envir = .GlobalEnv)
 Q_data_plot = Q_diff %>%  
   mutate(sa = case_when(
     sa == "M2" ~ "No age VE",
-    sa == "M3" ~ "Age VE",
+    sa == "M3" ~ "Age VE\n(all age groups)",
     sa == "M4" ~ "Baseline",
     sa == "M9" ~ "No age VE\nAge FOI (4-5yrs)",
     sa == "M10" ~ "Serotype enhancement\nparameter",
@@ -129,7 +130,7 @@ Q_data_plot = Q_diff %>%
   mutate(sa = factor(sa, levels = c(
     "Baseline",
     "No age VE",
-    "Age VE",
+    "Age VE\n(all age groups)",
     "No age VE\nAge FOI (4-5yrs)",
     "No serotype\nantibody titres",
     "Serotype enhancement\nparameter",
@@ -174,7 +175,12 @@ B_data_plot = B_diff %>%
 
 # ── Compute shared colour scale limits ────────────────────────────────────────
 
-abs_max = max(abs(filter(D_data_plot, !main)$difference), na.rm = TRUE)
+abs_max = max(c(abs(filter(D_data_plot, !main)$difference), 
+                abs(filter(Q_data_plot, !main)$difference),
+                abs(filter(B_data_plot, !main)$difference)
+                ),
+              na.rm = TRUE)
+
 # Round up to nearest 5pp for clean breaks
 scale_limit = ceiling(abs_max / 5) * 5
 
@@ -223,7 +229,7 @@ all = (Q_plot / D_plot / B_plot) +
   plot_annotation(tag_levels = "a") +
   plot_layout(
     guides  = "collect",
-    heights = c(1.2, 1, 1)  
+    heights = c(1.3, 1, 1)  
   ) &
   theme(legend.position = "bottom")
 
@@ -231,7 +237,8 @@ all = (Q_plot / D_plot / B_plot) +
 ggsave(
   filename = "output/figures/Fig4.pdf",
   plot     = all,
-  width    = 18,
+  width    = 21,
   height   = 22,   
   units    = "cm"
 )
+
