@@ -14,8 +14,6 @@ Instructions to download and install **Rtools** (Windows only) can be found [her
 
 ## Overview of workflow
 
-The pipeline follows a reproducible sequence:
-
 1. **Trial-specific data formatting**  
    Each vaccine dataset is summarised by age, serostatus, serotype, trial arm, and time. Counts are reshaped into multidimensional arrays required by Stan. Vaccine-specific formatted datasets are merged into a single Stan data list. 
 
