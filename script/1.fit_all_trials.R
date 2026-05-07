@@ -82,7 +82,7 @@ run_model_TR (
   L_K = c(0,0,0),
   folder = "M3",
   n_it = n_it,
-  adapt_delta = 0.84,
+  adapt_delta = 0.88,
   stan_model = "final_model.stan",
   mu_Q  = array(read.csv("data/processed_Q/n0_new.csv")$mean, dim = c(2, 4)),
   baseline_SP_Q = read.csv("data/processed_Q/seropositive_by_age_baseline.csv"),
@@ -96,7 +96,7 @@ run_model_TR (
   mu_Bu = readRDS("data/processed_Bu/mu.RDS")
 )
 
-#  
+  
 # M4 - M2 but age VE for Qdenga only youngest  ---------------------------------
 run_model_TR (
   BF = T, 
@@ -123,8 +123,7 @@ run_model_TR (
   baseline_SP_Bu = readRDS("data/processed_Bu/baseline_SP.RDS"),
   mu_Bu = readRDS("data/processed_Bu/mu.RDS")
 )
-
-# 
+ 
 # M5 - M2 but age VE for Dengvaxia  --------------------------------------------
 run_model_TR (
   include_beta = c(0,1,0),
@@ -164,7 +163,7 @@ run_model_TR (
   L_K = c(0,0,0),
   folder = "M6",
   n_it = n_it,
-  adapt_delta = 0.88,
+  adapt_delta = 0.89,
   stan_model = "final_model.stan",
   mu_Q  = array(read.csv("data/processed_Q/n0_new.csv")$mean, dim = c(2, 4)),
   baseline_SP_Q = read.csv("data/processed_Q/seropositive_by_age_baseline.csv"),
@@ -278,7 +277,7 @@ run_model_TR (
   tau_K = c(0,0,0),
   folder = "M10",
   n_it = n_it,
-  adapt_delta = 0.88,
+  adapt_delta = 0.99,
   stan_model = "final_model.stan",
   mu_Q  = array(read.csv("data/processed_Q/n0_new.csv")$mean, dim = c(2, 4)),
   baseline_SP_Q = read.csv("data/processed_Q/seropositive_by_age_baseline.csv"),
