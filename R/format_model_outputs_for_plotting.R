@@ -34,7 +34,8 @@ extract_model_results = function(fit_ext){
 # ------------------------------------------------------------------------------
 
 process_VE_files = function(folder_names, type = c("Q", "De", "Bu"), n) {
-  type = match.arg(type)
+ 
+   type = match.arg(type)
   
   # build file paths
   files = file.path("output", folder_names, paste0("VE_", type, ".RDS"))
@@ -99,12 +100,12 @@ process_sens = function(list, split_into) {
 calculate_diff = function(df,
                            age_weights = NULL,
                            main_model,
-                           outcome = 1,
+                           selected_outcome = 1,
                            serostatus_labels) {
 
   # filter to baseline scenario
   baseline = df %>%
-    filter(outcome == outcome, sa == main_model)
+    filter(outcome == !!selected_outcome, sa == main_model)
   
   # take weighted average across age groups 
   baseline_mean = baseline %>%
@@ -117,7 +118,7 @@ calculate_diff = function(df,
   
   # sens means
   scenario = df %>%
-    filter(outcome == outcome) %>%
+    filter(outcome == !!selected_outcome) %>%
     left_join(age_weights, by = "age") %>%
     group_by(sa, serostatus, serotype, month, ni) %>%
     summarise(value = weighted.mean(value, w = n), .groups = "drop") %>%
