@@ -93,13 +93,13 @@ time_plot_Q = AR_model_Q %>%
   ) %>%
   bind_rows(AR_VRD_Q) %>%
   mutate(month = as.character(month)) %>%
-  filter(outcome == "symptomatic") %>% 
+  filter(outcome != "symptomatic") %>% 
   ggplot(aes(x = month, y = mean)) +
   geom_point(aes(color = trial, shape = type),
              position = position_dodge(width = 0.6), size = 1.5) +
   geom_errorbar(aes(ymin = lower, ymax = upper, color = trial, linetype = type),
                 position = position_dodge(width = 0.6), width = 0, linewidth = 0.5) +
-  labs(x = "Month", y = "Qdenga symptomatic\nattack rate (%)") +
+  labs(x = "Month", y = "Qdenga hospitalised\nattack rate (%)") +
   scale_color_manual(values = trial_fill) +
   theme(legend.position = c(0.81,0.8))
 
@@ -136,7 +136,7 @@ serotype_plot_Q = AR_model_Q %>%
                 position = position_dodge(width = 0.5), width = 0, linewidth = 0.5) +
   guides(shape = "none", linetype = "none") +
   scale_color_manual(values = serotype_fill) +
-  ylab("Qdenga symptomatic\nattack rate (%)") +
+  ylab("Qdenga symptomatic\nattack rate over 54 months (%)") +
   theme(legend.position = c(0.87,0.8), axis.title.x = element_blank())
 
 # ── Dengvaxia ──────────────────────────────────────────────────────────────────
@@ -180,7 +180,7 @@ serotype_plot_D = Sy_AR_VK_De %>%
   geom_errorbar(aes(ymin = lower, ymax = upper),
                 position = position_dodge(width = 0.5), width = 0, linewidth = 0.5) +
   scale_color_manual(values = serotype_fill) +
-  ylab("Dengvaxia symptomatic\nattack rate") +
+  ylab("Dengvaxia symptomatic\nattack rate over 13 months (%)") +
   theme(legend.position = "none",axis.title.x = element_blank())
 
 
@@ -242,7 +242,7 @@ serotype_plot_B = AR_model_B %>%
                     group = interaction(type, serotype), linetype = type, color = serotype),
                 position = position_dodge(width = 0.5), width = 0, linewidth = 0.5) +
   scale_color_manual(values = serotype_fill) +
-  ylab("Butantan-DV symptomatic\nattack rate (%)") +
+  ylab("Butantan-DV symptomatic\nattack rate over 60 months (%)") +
   theme(legend.position = "none", axis.title.x = element_blank())
 
 # Time plot 
@@ -270,17 +270,20 @@ time_plot_B = AR_model_B %>%
 
 # ── Assemble figure ────────────────────────────────────────────────────────────
 
-grid_plot = (time_plot_Q /  serotype_plot_Q) |
-  (time_plot_D  /  serotype_plot_D) |
-  (time_plot_B  / serotype_plot_B)  +
+grid_plot_B = (time_plot_Q) |
+  (time_plot_D) |
+  (time_plot_B)  +
   theme(plot.tag = element_text(size = 12))
 
+grid_plot_C = (serotype_plot_Q) |
+  (serotype_plot_D) |
+  (serotype_plot_B)  +
+  theme(plot.tag = element_text(size = 12))
 
 out = plot_grid(
-  all_plot, grid_plot,
+  all_plot, grid_plot_B, grid_plot_C,
   ncol = 1,
-  rel_heights = c(1, 1.5),
-  labels = c("a", "b")
+  labels = c("a", "b", "c")
 )
 
 ggsave(
